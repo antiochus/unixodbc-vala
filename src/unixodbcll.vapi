@@ -93,14 +93,14 @@ public static Return set_environment_attribute (Handle environment, Attribute at
 
 [CCode (cname = "SQLDrivers")]
 public static Return get_drivers (Handle environment, FetchDirection direction,
-	[CCode (array_length = true, array_pos = 2.1)] char[] name, out short name_ret,
-	[CCode (array_length = true, array_pos = 4.1)] char[] attributes, out short attribute_ret
+	[CCode (array_length = true, array_pos = 2.1)] uint8[] name, out short name_ret,
+	[CCode (array_length = true, array_pos = 4.1)] uint8[] attributes, out short attribute_ret
 );
 
 [CCode (cname = "SQLDriverConnect")]
 public static Return driver_connect (Handle connection, Hwnd hwnd, 
-	[CCode (array_length = true, array_pos = 2.1)] char[] connection_string_in,
-	[CCode (array_length = true, array_pos = 3.1)] char[]? connection_string_out,
+	[CCode (array_length = true, array_pos = 2.1)] uint8[] connection_string_in,
+	[CCode (array_length = true, array_pos = 3.1)] uint8[]? connection_string_out,
 	out short? connection_string_out_len, DriverCompletion driver_completion);
 
 [CCode (cname = "SQLDisconnect")]
@@ -108,7 +108,7 @@ public static Return disconnect (Handle connection);
 
 [CCode (cname = "SQLExecDirect")]
 public static Return execute_direct (Handle statement, 
-	[CCode (array_length = true, array_pos = 1.1)] char[] text);
+	[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
 
 [CCode (cname = "SQLNumResultCols")]
 public static Return number_result_columns (Handle statement, out short column_count);
@@ -116,8 +116,8 @@ public static Return number_result_columns (Handle statement, out short column_c
 [CCode (cname = "SQLGetDiagRec")]
 public static Return get_diagnostic_record (HandleType handle_type, 
 	Handle handle, short record_number, 
-	[CCode (array_length = false)] char[] state, out int native_error, 
-	[CCode (array_length = true, array_pos = 5.1)] char[] message_text,
+	[CCode (array_length = false)] uint8[] state, out int native_error, 
+	[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
 	out short text_length);
 
 }

@@ -48,17 +48,22 @@ private static Handle allocate_handle_checked (HandleType type, Handle input_han
 
 private static void free_handle_checked (HandleType type, Handle handle) throws UnixOdbcError {
 	if (!succeeded (free_handle (type, handle))) {
-		throw new UnixOdbcError.FREE_HANDLE ("Could not free handle" + get_diagnostic_text (type, handle));
+		throw new UnixOdbcError.FREE_HANDLE ("Could not free handle: " + get_diagnostic_text (type, handle));
 	}
 }
 
 private static string get_diagnostic_text (HandleType type, Handle handle) {
-	char[] state = new char[10];
+	uint8[] state = new uint8[10];
 	int native_error;
-	char[] message_text = new char[2048];
+	uint8[] message_text = new uint8[4096];
 	short text_len;
-	get_diagnostic_record (type, handle, 1, state, out native_error, message_text, out text_len);
-	return "state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text);
+	// TODO: A function call can generate multiple diagnostic records
+	if (succeeded (get_diagnostic_record (type, handle, 1, state, out native_error, message_text, out text_len))) {
+		return "state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text);
+	}
+	else {
+		return "get_diagnostic_record () failed";
+	}
 }
 
 
@@ -72,7 +77,7 @@ public class Driver {
 	}
 }
 
-private void char_array_to_attributes (char[] input, Map<string, string> output) {
+private void char_array_to_attributes (uint8[] input, Map<string, string> output) {
 	StringBuilder sb = new StringBuilder("");
 	for (int i = 0; i < input.length; i++) {
 		if (input[i] == '\0') {
@@ -85,7 +90,7 @@ private void char_array_to_attributes (char[] input, Map<string, string> output)
 			sb = new StringBuilder("");
 		}
 		else {
-			sb.append_c (input[i]);
+			sb.append_c ((char) input[i]);
 		}
 	}
 }
@@ -109,8 +114,8 @@ public class Environment {
 
 		FetchDirection direction = FetchDirection.FIRST;
 		Return ret;
-		char[] driver = new char[256];
-		char[] attr   = new char[4096];
+		uint8[] driver = new uint8[256];
+		uint8[] attr   = new uint8[4096];
 		short driver_ret;
 		short attr_ret;
 		while (succeeded (ret = UnixOdbcLL.get_drivers (handle, direction, driver, out driver_ret, attr, out attr_ret))) {
@@ -152,7 +157,7 @@ public class Connection {
 		}
 	}
 	public void open () throws UnixOdbcError {
-		char[] connstr = (char[]) connection_string.data;
+		uchar[] connstr = (uchar[]) connection_string.data;
 		if (!succeeded (driver_connect (handle, 0, connstr, null, null, DriverCompletion.COMPLETE))) {
 			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text (HandleType.DBC, handle));
 		}
@@ -168,6 +173,7 @@ public class Connection {
 public class Statement {
 	public Handle handle { get; private set; }
 	public Connection connection { get; private set; }
+	public string text { get; set; }
 	public Statement (Connection connection) throws UnixOdbcError {
 		this.connection = connection;
 		handle = allocate_handle_checked (HandleType.STMT, connection.handle);
@@ -177,9 +183,9 @@ public class Statement {
 			free_handle_checked (HandleType.STMT, handle);
 		}
 	}
-	public void execute_direct (string text) throws UnixOdbcError {
-		if (!succeeded (UnixOdbcLL.execute_direct (handle, (char[]) text.data))) {
-			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not open connection: " + get_diagnostic_text(HandleType.STMT, handle));
+	public void execute () throws UnixOdbcError {
+		if (!succeeded (UnixOdbcLL.execute_direct (handle, (uint8[]) text.data))) {
+			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not execute statement: " + get_diagnostic_text(HandleType.STMT, handle));
 		}
 	}
 	public int get_column_count () throws UnixOdbcError {
