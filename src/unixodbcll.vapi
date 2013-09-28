@@ -18,7 +18,8 @@
  */
 
 [CCode (cheader_filename = "sqlext.h")]
-namespace UnixOdbc {
+// Low level adaption
+namespace UnixOdbcLL {
 
 [CCode (cname = "SQLRETURN", cprefix = "SQL_")]
 public enum Return {
@@ -65,11 +66,16 @@ public enum DriverCompletion {
 }
 
 /*
-[CCode(cname = "void")]
+ * This would work, but have some issues. SQLFreeHandle expects a HandleType.
+ * 
+ * For now let's just pretend a handle is a long integer.
+ * 
+[CCode(cname = "void", free_function = "SQLFreeHandle")]
 [Compact]
 public class Handle {
 }
 */
+
 [CCode (cname = "SQLHANDLE")]
 public struct Handle : long { }
 
@@ -77,32 +83,32 @@ public struct Handle : long { }
 public struct Hwnd : long { }
 
 [CCode(cname = "SQLAllocHandle")]
-private static Return allocate_handle_real (HandleType type, Handle input_handle, out Handle output_handle);
+public static Return allocate_handle (HandleType type, Handle input_handle, out Handle output_handle);
 
 [CCode (cname = "SQLSetEnvAttr")]
-private static Return set_environment_attribute_real (Handle environment, Attribute attribute, void* value, int string_length);
+public static Return set_environment_attribute (Handle environment, Attribute attribute, void* value, int string_length);
 
 [CCode (cname = "SQLDrivers")]
-private static Return get_drivers_real (Handle environment, FetchDirection direction,
+public static Return get_drivers (Handle environment, FetchDirection direction,
 	[CCode (array_length = true, array_pos = 2.1)] char[] name, out short name_ret,
 	[CCode (array_length = true, array_pos = 4.1)] char[] attributes, out short attribute_ret
 );
 
 [CCode (cname = "SQLDriverConnect")]
-private static Return driver_connect_real (Handle connection, Hwnd hwnd, 
+public static Return driver_connect (Handle connection, Hwnd hwnd, 
 	[CCode (array_length = true, array_pos = 2.1)] char[] connection_string_in,
 	[CCode (array_length = true, array_pos = 3.1)] char[]? connection_string_out,
 	out short? connection_string_out_len, DriverCompletion driver_completion);
 
 [CCode (cname = "SQLExecDirect")]
-private static Return execute_direct_real (Handle statement, 
+public static Return execute_direct (Handle statement, 
 	[CCode (array_length = true, array_pos = 1.1)] char[] text);
 
 [CCode (cname = "SQLNumResultCols")]
-private static Return number_result_columns_real (Handle statement, out short column_count);
+public static Return number_result_columns (Handle statement, out short column_count);
 
 [CCode (cname = "SQLGetDiagRec")]
-private static Return get_diagnostic_record_real (HandleType handle_type, 
+public static Return get_diagnostic_record (HandleType handle_type, 
 	Handle handle, short record_number, 
 	[CCode (array_length = false)] char[] state, out int native_error, 
 	[CCode (array_length = true, array_pos = 5.1)] char[] message_text,

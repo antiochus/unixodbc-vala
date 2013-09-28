@@ -19,7 +19,9 @@
 
 using GLib;
 using Gee;
+using UnixOdbcLL;
 
+// High level interface to UnixOdbcLL
 namespace UnixOdbc {
 
 public errordomain UnixOdbcError {
@@ -35,14 +37,16 @@ bool succeeded (Return ret) {
 	return (ret == Return.SUCCESS || ret == Return.SUCCESS_WITH_INFO);
 }
 
-private static Handle allocate_handle (HandleType type, Handle input_handle) throws UnixOdbcError {
+private static Handle allocate_handle_checked (HandleType type, Handle input_handle) throws UnixOdbcError {
 	Handle result;
-	if (!succeeded (allocate_handle_real (type, input_handle, out result))) {
+	if (!succeeded (allocate_handle (type, input_handle, out result))) {
 		throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate handle");
 	}
-	if (result == 0) {
+	/*
+	if (result == null) {
 		throw new UnixOdbcError.ALLOCATE_HANDLE ("Got null handle from ODBC");
 	}
+	*/
 	return result;
 }
 
@@ -75,10 +79,12 @@ private void char_array_to_attributes (char[] input, Map<string, string> output)
 }
 
 public class Environment {
-	public Handle handle { get; private set; }
+	// public Handle handle { get; private set; }
+	public Handle handle;
 	
 	public Environment () throws UnixOdbcError {
-		handle = allocate_handle (HandleType.ENV, 0);
+		handle = allocate_handle_checked (HandleType.ENV, 0);
+		set_odbc_version (OdbcVersion.ODBC3);
 	}
 
 	public ArrayList<Driver> get_drivers () {
@@ -90,7 +96,7 @@ public class Environment {
 		char[] attr   = new char[256];
 		short driver_ret;
 		short attr_ret;
-		while (succeeded (ret = get_drivers_real (handle, direction, driver, out driver_ret, attr, out attr_ret))) {
+		while (succeeded (ret = UnixOdbcLL.get_drivers (handle, direction, driver, out driver_ret, attr, out attr_ret))) {
 			direction = FetchDirection.NEXT;
 
 			Map<string, string> attributes = new HashMap<string, string>();
@@ -106,50 +112,50 @@ public class Environment {
 		return result;
 	}
 	
-	public void set_odbc_version (OdbcVersion value) throws UnixOdbcError {
-		if (!succeeded (set_environment_attribute_real (handle, Attribute.ODBC_VERSION, (void *) value, 0))) {
+	private void set_odbc_version (OdbcVersion value) throws UnixOdbcError {
+		if (!succeeded (set_environment_attribute (handle, Attribute.ODBC_VERSION, (void *) value, 0))) {
 			throw new UnixOdbcError.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute");
 		}
 	} 
 }
 
 public class Connection {
-	public Handle handle { get; private set; }
+	public Handle handle; // { get; private set; }
 	public string connection_string { get; set; }
 	public Connection (Environment environment) throws UnixOdbcError {
-		handle = allocate_handle (HandleType.DBC, environment.handle);
+		handle = allocate_handle_checked (HandleType.DBC, environment.handle);
 	}
 	public void open () throws UnixOdbcError {
 		char[] connstr = (char[]) connection_string.data;
-		if (!succeeded (driver_connect_real (handle, 0, connstr, null, null, DriverCompletion.COMPLETE))) {
+		if (!succeeded (driver_connect (handle, 0, connstr, null, null, DriverCompletion.COMPLETE))) {
 			char[] state = new char[10];
 			int native_error;
 			char[] message_text = new char[2048];
 			short text_len;
-			get_diagnostic_record_real (HandleType.DBC, handle, 1, state, out native_error, message_text, out text_len);
+			get_diagnostic_record (HandleType.DBC, handle, 1, state, out native_error, message_text, out text_len);
 			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text));
 		}
 	}
 }
 
 public class Statement {
-	public Handle handle { get; private set; }
+	public Handle handle; //  { get; private set; }
 	public Statement (Connection connection) throws UnixOdbcError {
-		handle = allocate_handle (HandleType.STMT, connection.handle);
+		handle = allocate_handle_checked (HandleType.STMT, connection.handle);
 	}
 	public void execute_direct (string text) throws UnixOdbcError {
-		if (!succeeded (execute_direct_real (handle, (char[]) text.data))) {
+		if (!succeeded (UnixOdbcLL.execute_direct (handle, (char[]) text.data))) {
 			char[] state = new char[10];
 			int native_error;
 			char[] message_text = new char[2048];
 			short text_len;
-			get_diagnostic_record_real (HandleType.STMT, handle, 1, state, out native_error, message_text, out text_len);
+			get_diagnostic_record (HandleType.STMT, handle, 1, state, out native_error, message_text, out text_len);
 			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not open connection: state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text));
 		}
 	}
 	public int get_column_count () throws UnixOdbcError {
 		short count;
-		if (!succeeded (number_result_columns_real (handle, out count))) {
+		if (!succeeded (number_result_columns (handle, out count))) {
 			throw new UnixOdbcError.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
 		}
 		return count;
