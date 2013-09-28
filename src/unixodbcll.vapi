@@ -57,12 +57,30 @@ public enum FetchDirection {
 	RELATIVE
 }
 
-[CCode (cname ="unsinged short", cprefix = "SQL_DRIVER_")]
+[CCode (cname = "unsinged short", cprefix = "SQL_DRIVER_")]
 public enum DriverCompletion {
 	NOPROMPT,
 	COMPLETE,
 	PROMPT,
 	COMPLETE_REQUIRED
+}
+
+[CCode (cname = "unsinged short", cprefix = "SQL_DESC_")]
+public enum ColumnDescriptor {
+	COUNT,
+	TYPE,
+	LENGTH,
+	LENGTH_PTR,
+	PRECISION,
+	SCALE,
+	DATETIME_INTERVAL_CODE,
+	NULLABLE,
+	INDICATOR_PTR,
+	DATA_PTR,
+	NAME,
+	UNNAMED,
+	OCTET_LENGTH,
+	ALLOC_TYPE
 }
 
 /*
@@ -113,11 +131,19 @@ public static Return execute_direct (Handle statement,
 [CCode (cname = "SQLNumResultCols")]
 public static Return number_result_columns (Handle statement, out short column_count);
 
+[CCode (cname = "SQLColAttribute")]
+public static Return column_attribute (Handle statement, ushort column_number,
+	ColumnDescriptor field_identifier, void* character_attribute, 
+	short buffer_length, out short string_length, out long numeric_attribute);
+
 [CCode (cname = "SQLGetDiagRec")]
 public static Return get_diagnostic_record (HandleType handle_type, 
 	Handle handle, short record_number, 
 	[CCode (array_length = false)] uint8[] state, out int native_error, 
 	[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
 	out short text_length);
+
+[CCode (cname = "SQLFetch")]
+public static Return fetch (Handle handle);
 
 }

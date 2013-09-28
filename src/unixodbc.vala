@@ -170,6 +170,24 @@ public class Connection {
 	}
 }
 
+public class Record {
+}
+
+public class RecordIterator {
+	public Statement statement { get; private set; }
+	public RecordIterator (Statement statement) {
+		this.statement = statement;
+	}
+	public Record? next_value () {
+		if (succeeded (fetch (statement.handle))) {
+			return new Record ();
+		}
+		else {
+			return null;
+		}
+	}
+}
+
 public class Statement {
 	public Handle handle { get; private set; }
 	public Connection connection { get; private set; }
@@ -194,6 +212,9 @@ public class Statement {
 			throw new UnixOdbcError.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
 		}
 		return count;
+	}
+	public RecordIterator iterator () {
+		return new RecordIterator (this);
 	}
 }
 
