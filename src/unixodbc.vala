@@ -26,6 +26,7 @@ namespace UnixOdbc {
 
 public errordomain UnixOdbcError {
 	ALLOCATE_HANDLE,
+	FREE_HANDLE,
 	SET_ENVIRONMENT_ATTRIBUTE,
 	DRIVERS,
 	DRIVER_CONNECT,
@@ -42,13 +43,24 @@ private static Handle allocate_handle_checked (HandleType type, Handle input_han
 	if (!succeeded (allocate_handle (type, input_handle, out result))) {
 		throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate handle");
 	}
-	/*
-	if (result == null) {
-		throw new UnixOdbcError.ALLOCATE_HANDLE ("Got null handle from ODBC");
-	}
-	*/
 	return result;
 }
+
+private static void free_handle_checked (HandleType type, Handle handle) throws UnixOdbcError {
+	if (!succeeded (free_handle (type, handle))) {
+		throw new UnixOdbcError.FREE_HANDLE ("Could not free handle" + get_diagnostic_text (type, handle));
+	}
+}
+
+private static string get_diagnostic_text (HandleType type, Handle handle) {
+	char[] state = new char[10];
+	int native_error;
+	char[] message_text = new char[2048];
+	short text_len;
+	get_diagnostic_record (type, handle, 1, state, out native_error, message_text, out text_len);
+	return "state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text);
+}
+
 
 public class Driver {
 	public string name { get; private set; }
@@ -79,12 +91,17 @@ private void char_array_to_attributes (char[] input, Map<string, string> output)
 }
 
 public class Environment {
-	// public Handle handle { get; private set; }
-	public Handle handle;
+	public Handle handle { get; private set; }
 	
 	public Environment () throws UnixOdbcError {
 		handle = allocate_handle_checked (HandleType.ENV, 0);
 		set_odbc_version (OdbcVersion.ODBC3);
+	}
+
+	~Environment () {
+		if (handle != 0) {
+			free_handle_checked (HandleType.ENV, handle);
+		}
 	}
 
 	public ArrayList<Driver> get_drivers () {
@@ -93,7 +110,7 @@ public class Environment {
 		FetchDirection direction = FetchDirection.FIRST;
 		Return ret;
 		char[] driver = new char[256];
-		char[] attr   = new char[256];
+		char[] attr   = new char[4096];
 		short driver_ret;
 		short attr_ret;
 		while (succeeded (ret = UnixOdbcLL.get_drivers (handle, direction, driver, out driver_ret, attr, out attr_ret))) {
@@ -120,37 +137,49 @@ public class Environment {
 }
 
 public class Connection {
-	public Handle handle; // { get; private set; }
+	public bool connected { get; private set; }
+	public Handle handle { get; private set; }
+	public Environment environment { get; private set; }
 	public string connection_string { get; set; }
 	public Connection (Environment environment) throws UnixOdbcError {
+		this.environment = environment;
 		handle = allocate_handle_checked (HandleType.DBC, environment.handle);
+	}
+	~Connection () {
+		if (handle != 0) {
+			close ();
+			free_handle_checked (HandleType.DBC, handle);
+		}
 	}
 	public void open () throws UnixOdbcError {
 		char[] connstr = (char[]) connection_string.data;
 		if (!succeeded (driver_connect (handle, 0, connstr, null, null, DriverCompletion.COMPLETE))) {
-			char[] state = new char[10];
-			int native_error;
-			char[] message_text = new char[2048];
-			short text_len;
-			get_diagnostic_record (HandleType.DBC, handle, 1, state, out native_error, message_text, out text_len);
-			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text));
+			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text (HandleType.DBC, handle));
+		}
+		connected = true;
+	}
+	public void close () throws UnixOdbcError {
+		if (connected) {
+			disconnect (handle);
 		}
 	}
 }
 
 public class Statement {
-	public Handle handle; //  { get; private set; }
+	public Handle handle { get; private set; }
+	public Connection connection { get; private set; }
 	public Statement (Connection connection) throws UnixOdbcError {
+		this.connection = connection;
 		handle = allocate_handle_checked (HandleType.STMT, connection.handle);
+	}
+	~Statement () {
+		if (handle != 0) {
+			free_handle_checked (HandleType.STMT, handle);
+		}
 	}
 	public void execute_direct (string text) throws UnixOdbcError {
 		if (!succeeded (UnixOdbcLL.execute_direct (handle, (char[]) text.data))) {
-			char[] state = new char[10];
-			int native_error;
-			char[] message_text = new char[2048];
-			short text_len;
-			get_diagnostic_record (HandleType.STMT, handle, 1, state, out native_error, message_text, out text_len);
-			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not open connection: state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text));
+			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not open connection: " + get_diagnostic_text(HandleType.STMT, handle));
 		}
 	}
 	public int get_column_count () throws UnixOdbcError {

@@ -82,8 +82,11 @@ public struct Handle : long { }
 [CCode (cname = "SQLHWND")]
 public struct Hwnd : long { }
 
-[CCode(cname = "SQLAllocHandle")]
+[CCode (cname = "SQLAllocHandle")]
 public static Return allocate_handle (HandleType type, Handle input_handle, out Handle output_handle);
+
+[CCode (cname = "SQLFreeHandle")]
+public static Return free_handle (HandleType type, Handle handle);
 
 [CCode (cname = "SQLSetEnvAttr")]
 public static Return set_environment_attribute (Handle environment, Attribute attribute, void* value, int string_length);
@@ -99,6 +102,9 @@ public static Return driver_connect (Handle connection, Hwnd hwnd,
 	[CCode (array_length = true, array_pos = 2.1)] char[] connection_string_in,
 	[CCode (array_length = true, array_pos = 3.1)] char[]? connection_string_out,
 	out short? connection_string_out_len, DriverCompletion driver_completion);
+
+[CCode (cname = "SQLDisconnect")]
+public static Return disconnect (Handle connection);
 
 [CCode (cname = "SQLExecDirect")]
 public static Return execute_direct (Handle statement, 
