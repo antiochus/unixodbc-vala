@@ -17,7 +17,7 @@
  * with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-[CCode (cheader_filename = "sqlext.h")]
+[CCode (cheader_filename = "sqlext.h,unixodbcll.h")]
 // Low level adaption
 namespace UnixOdbcLL {
 
@@ -29,13 +29,7 @@ public enum Return {
 	INVALID_HANDLE
 }
 
-[CCode (cname = "SQLSMALLINT", cprefix = "SQL_HANDLE_")]
-public enum HandleType {
-	ENV,
-	DBC,
-	STMT,
-	DESC
-}
+// EnvironmentHandle -----------------------------------------------------------
 
 [CCode (cname = "int", cprefix = "SQL_ATTR_")]
 public enum Attribute {
@@ -57,6 +51,33 @@ public enum FetchDirection {
 	RELATIVE
 }
 
+[CCode (cname = "void", free_function = "SQLFREEENVHANDLE")]
+[Compact]
+public class EnvironmentHandle {
+	[CCode (cname = "SQLALLOCENVHANDLE")]
+	public static Return allocate (out EnvironmentHandle output_handle);
+
+	[CCode (cname = "SQLENVGETDIAGREC")]
+	public Return get_diagnostic_record (
+		short record_number, [CCode (array_length = false)] uint8[] state,
+		out int native_error,
+		[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
+		out short text_length);
+
+	[CCode (cname = "SQLSetEnvAttr")]
+	public Return set_attribute (Attribute attribute, void* value, int string_length);
+
+	[CCode (cname = "SQLDrivers")]
+	public Return get_drivers (FetchDirection direction,
+		[CCode (array_length = true, array_pos = 2.1)] uint8[] name, out short name_ret,
+		[CCode (array_length = true, array_pos = 4.1)] uint8[] attributes, out short attribute_ret);
+}
+
+// ConnectionHandle ------------------------------------------------------------
+
+[CCode (cname = "SQLHWND")]
+public struct Hwnd : long { }
+
 [CCode (cname = "unsinged short", cprefix = "SQL_DRIVER_")]
 public enum DriverCompletion {
 	NOPROMPT,
@@ -64,6 +85,31 @@ public enum DriverCompletion {
 	PROMPT,
 	COMPLETE_REQUIRED
 }
+
+[CCode (cname = "void", free_function = "SQLFREEDBCHANDLE")]
+[Compact]
+public class ConnectionHandle {
+	[CCode (cname = "SQLALLOCDBCHANDLE")]
+	public static Return allocate (EnvironmentHandle input_handle, out ConnectionHandle output_handle);
+
+	[CCode (cname = "SQLDBCGETDIAGREC")]
+	public Return get_diagnostic_record (
+		short record_number, [CCode (array_length = false)] uint8[] state,
+		out int native_error,
+		[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
+		out short text_length);
+
+	[CCode (cname = "SQLDriverConnect")]
+	public Return driver_connect (Hwnd hwnd, 
+		[CCode (array_length = true, array_pos = 2.1)] uint8[] connection_string_in,
+		[CCode (array_length = true, array_pos = 3.1)] uint8[]? connection_string_out,
+		out short? connection_string_out_len, DriverCompletion driver_completion);
+
+	[CCode (cname = "SQLDisconnect")]
+	public Return disconnect ();
+}
+
+// StatementHandle -------------------------------------------------------------
 
 [CCode (cname = "unsinged short", cprefix = "SQL_DESC_")]
 public enum ColumnDescriptor {
@@ -83,67 +129,33 @@ public enum ColumnDescriptor {
 	ALLOC_TYPE
 }
 
-/*
- * This would work, but have some issues. SQLFreeHandle expects a HandleType.
- * 
- * For now let's just pretend a handle is a long integer.
- * 
-[CCode(cname = "void", free_function = "SQLFreeHandle")]
+[CCode (cname = "void", free_function = "SQLFREESTMTHANDLE")]
 [Compact]
-public class Handle {
+public class StatementHandle {
+	[CCode (cname = "SQLALLOCSTMTHANDLE")]
+	public static Return allocate (ConnectionHandle input_handle, out StatementHandle output_handle);
+
+	[CCode (cname = "SQLSTMTGETDIAGREC")]
+	public Return get_diagnostic_record (
+		short record_number, [CCode (array_length = false)] uint8[] state,
+		out int native_error,
+		[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
+		out short text_length);
+
+	[CCode (cname = "SQLExecDirect")]
+	public Return execute_direct (
+		[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
+
+	[CCode (cname = "SQLNumResultCols")]
+	public Return number_of_result_columns (out short column_count);
+
+	[CCode (cname = "SQLColAttribute")]
+	public Return column_attribute (ushort column_number,
+		ColumnDescriptor field_identifier, void* character_attribute, 
+		short buffer_length, out short string_length, out long numeric_attribute);
+
+	[CCode (cname = "SQLFetch")]
+	public Return fetch ();
 }
-*/
-
-[CCode (cname = "SQLHANDLE")]
-public struct Handle : long { }
-
-[CCode (cname = "SQLHWND")]
-public struct Hwnd : long { }
-
-[CCode (cname = "SQLAllocHandle")]
-public static Return allocate_handle (HandleType type, Handle input_handle, out Handle output_handle);
-
-[CCode (cname = "SQLFreeHandle")]
-public static Return free_handle (HandleType type, Handle handle);
-
-[CCode (cname = "SQLSetEnvAttr")]
-public static Return set_environment_attribute (Handle environment, Attribute attribute, void* value, int string_length);
-
-[CCode (cname = "SQLDrivers")]
-public static Return get_drivers (Handle environment, FetchDirection direction,
-	[CCode (array_length = true, array_pos = 2.1)] uint8[] name, out short name_ret,
-	[CCode (array_length = true, array_pos = 4.1)] uint8[] attributes, out short attribute_ret
-);
-
-[CCode (cname = "SQLDriverConnect")]
-public static Return driver_connect (Handle connection, Hwnd hwnd, 
-	[CCode (array_length = true, array_pos = 2.1)] uint8[] connection_string_in,
-	[CCode (array_length = true, array_pos = 3.1)] uint8[]? connection_string_out,
-	out short? connection_string_out_len, DriverCompletion driver_completion);
-
-[CCode (cname = "SQLDisconnect")]
-public static Return disconnect (Handle connection);
-
-[CCode (cname = "SQLExecDirect")]
-public static Return execute_direct (Handle statement, 
-	[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
-
-[CCode (cname = "SQLNumResultCols")]
-public static Return number_result_columns (Handle statement, out short column_count);
-
-[CCode (cname = "SQLColAttribute")]
-public static Return column_attribute (Handle statement, ushort column_number,
-	ColumnDescriptor field_identifier, void* character_attribute, 
-	short buffer_length, out short string_length, out long numeric_attribute);
-
-[CCode (cname = "SQLGetDiagRec")]
-public static Return get_diagnostic_record (HandleType handle_type, 
-	Handle handle, short record_number, 
-	[CCode (array_length = false)] uint8[] state, out int native_error, 
-	[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
-	out short text_length);
-
-[CCode (cname = "SQLFetch")]
-public static Return fetch (Handle handle);
 
 }

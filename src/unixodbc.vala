@@ -38,35 +38,6 @@ bool succeeded (Return ret) {
 	return (ret == Return.SUCCESS || ret == Return.SUCCESS_WITH_INFO);
 }
 
-private static Handle allocate_handle_checked (HandleType type, Handle input_handle) throws UnixOdbcError {
-	Handle result;
-	if (!succeeded (allocate_handle (type, input_handle, out result))) {
-		throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate handle");
-	}
-	return result;
-}
-
-private static void free_handle_checked (HandleType type, Handle handle) throws UnixOdbcError {
-	if (!succeeded (free_handle (type, handle))) {
-		throw new UnixOdbcError.FREE_HANDLE ("Could not free handle: " + get_diagnostic_text (type, handle));
-	}
-}
-
-private static string get_diagnostic_text (HandleType type, Handle handle) {
-	uint8[] state = new uint8[10];
-	int native_error;
-	uint8[] message_text = new uint8[4096];
-	short text_len;
-	// TODO: A function call can generate multiple diagnostic records
-	if (succeeded (get_diagnostic_record (type, handle, 1, state, out native_error, message_text, out text_len))) {
-		return "state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text);
-	}
-	else {
-		return "get_diagnostic_record () failed";
-	}
-}
-
-
 public class Driver {
 	public string name { get; private set; }
 	public Map<string, string> attributes { get; private set; }
@@ -77,35 +48,53 @@ public class Driver {
 	}
 }
 
-private void char_array_to_attributes (uint8[] input, Map<string, string> output) {
-	StringBuilder sb = new StringBuilder("");
-	for (int i = 0; i < input.length; i++) {
-		if (input[i] == '\0') {
-			if (sb.data.length == 0) {
-				break;
-			}
-			string s = (string) sb.data;
-			var e = s.split ("=");
-			output[e[0]] = e[1];
-			sb = new StringBuilder("");
-		}
-		else {
-			sb.append_c ((char) input[i]);
-		}
+private delegate Return GetDiagnosticRecord (short record_number, uint8[] state, 
+	out int native_error, uint8[] message_text, out short text_length);
+
+private string get_diagnostic_record (GetDiagnosticRecord d) {
+	uint8[] state = new uint8[10];
+	int native_error;
+	uint8[] message_text = new uint8[4096];
+	short text_len;
+	// TODO: A function call can generate multiple diagnostic records
+	if (succeeded (d (1, state, out native_error, message_text, out text_len))) {
+		return "state = %s, native_error = %d, message = %s".printf ((string) state, native_error, (string) message_text);
+	}
+	else {
+		return "get_diagnostic_record () failed";
 	}
 }
 
 public class Environment {
-	public Handle handle { get; private set; }
+	internal EnvironmentHandle handle;
 	
 	public Environment () throws UnixOdbcError {
-		handle = allocate_handle_checked (HandleType.ENV, 0);
+		if (!succeeded (EnvironmentHandle.allocate (out handle))) {
+			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate environment handle");
+		}
 		set_odbc_version (OdbcVersion.ODBC3);
 	}
 
-	~Environment () {
-		if (handle != 0) {
-			free_handle_checked (HandleType.ENV, handle);
+	private string get_diagnostic_text () {
+		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	}
+
+	// Split a '\0' delimited list of "key=value" pairs (e.g. "key1=value1\0key1=value2\0\0")
+	private static void char_array_to_attributes (uint8[] input, Map<string, string> output) {
+		StringBuilder sb = new StringBuilder("");
+		for (int i = 0; i < input.length; i++) {
+			if (input[i] == '\0') {
+				if (sb.data.length == 0) {
+					break;
+				}
+				string s = (string) sb.data;
+				var e = s.split ("=");
+				output[e[0]] = e[1];
+				sb = new StringBuilder("");
+			}
+			else {
+				sb.append_c ((char) input[i]);
+			}
 		}
 	}
 
@@ -118,7 +107,7 @@ public class Environment {
 		uint8[] attr   = new uint8[4096];
 		short driver_ret;
 		short attr_ret;
-		while (succeeded (ret = UnixOdbcLL.get_drivers (handle, direction, driver, out driver_ret, attr, out attr_ret))) {
+		while (succeeded (ret = handle.get_drivers (direction, driver, out driver_ret, attr, out attr_ret))) {
 			direction = FetchDirection.NEXT;
 
 			Map<string, string> attributes = new HashMap<string, string>();
@@ -135,37 +124,44 @@ public class Environment {
 	}
 	
 	private void set_odbc_version (OdbcVersion value) throws UnixOdbcError {
-		if (!succeeded (set_environment_attribute (handle, Attribute.ODBC_VERSION, (void *) value, 0))) {
-			throw new UnixOdbcError.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute");
+		if (!succeeded (handle.set_attribute (Attribute.ODBC_VERSION, (void *) value, 0))) {
+			throw new UnixOdbcError.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute: " + get_diagnostic_text ());
 		}
 	} 
 }
 
 public class Connection {
 	public bool connected { get; private set; }
-	public Handle handle { get; private set; }
+	internal ConnectionHandle handle;
 	public Environment environment { get; private set; }
 	public string connection_string { get; set; }
+
 	public Connection (Environment environment) throws UnixOdbcError {
 		this.environment = environment;
-		handle = allocate_handle_checked (HandleType.DBC, environment.handle);
-	}
-	~Connection () {
-		if (handle != 0) {
-			close ();
-			free_handle_checked (HandleType.DBC, handle);
+		if (!succeeded (ConnectionHandle.allocate (environment.handle, out handle))) {
+			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate environment handle");
 		}
 	}
+
+	~Connection () {
+		close ();
+	}
+
+	private string get_diagnostic_text () {
+		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	}
+
 	public void open () throws UnixOdbcError {
 		uchar[] connstr = (uchar[]) connection_string.data;
-		if (!succeeded (driver_connect (handle, 0, connstr, null, null, DriverCompletion.COMPLETE))) {
-			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text (HandleType.DBC, handle));
+		if (!succeeded (handle.driver_connect (0, connstr, null, null, DriverCompletion.COMPLETE))) {
+			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text ());
 		}
 		connected = true;
 	}
-	public void close () throws UnixOdbcError {
+
+	public void close () {
 		if (connected) {
-			disconnect (handle);
+			assert( succeeded (handle.disconnect ()));
 		}
 	}
 }
@@ -175,11 +171,13 @@ public class Record {
 
 public class RecordIterator {
 	public Statement statement { get; private set; }
+
 	public RecordIterator (Statement statement) {
 		this.statement = statement;
 	}
+
 	public Record? next_value () {
-		if (succeeded (fetch (statement.handle))) {
+		if (succeeded (statement.handle.fetch ())) {
 			return new Record ();
 		}
 		else {
@@ -189,30 +187,35 @@ public class RecordIterator {
 }
 
 public class Statement {
-	public Handle handle { get; private set; }
+	internal StatementHandle handle;
 	public Connection connection { get; private set; }
 	public string text { get; set; }
+
 	public Statement (Connection connection) throws UnixOdbcError {
 		this.connection = connection;
-		handle = allocate_handle_checked (HandleType.STMT, connection.handle);
-	}
-	~Statement () {
-		if (handle != 0) {
-			free_handle_checked (HandleType.STMT, handle);
+		if (!succeeded (StatementHandle.allocate (connection.handle, out handle))) {
+			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate statement handle");
 		}
 	}
+
+	private string get_diagnostic_text () {
+		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	}
+
 	public void execute () throws UnixOdbcError {
-		if (!succeeded (UnixOdbcLL.execute_direct (handle, (uint8[]) text.data))) {
-			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not execute statement: " + get_diagnostic_text(HandleType.STMT, handle));
+		if (!succeeded (handle.execute_direct ((uint8[]) text.data))) {
+			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not execute statement: " + get_diagnostic_text());
 		}
 	}
+
 	public int get_column_count () throws UnixOdbcError {
 		short count;
-		if (!succeeded (number_result_columns (handle, out count))) {
+		if (!succeeded (handle.number_of_result_columns (out count))) {
 			throw new UnixOdbcError.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
 		}
 		return count;
 	}
+
 	public RecordIterator iterator () {
 		return new RecordIterator (this);
 	}
