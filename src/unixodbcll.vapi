@@ -129,6 +129,50 @@ public enum ColumnDescriptor {
 	ALLOC_TYPE
 }
 
+[CCode (cname = "unsigned short", cprefix = "SQL_C_")]
+public enum DataType {
+	CHAR,
+	LONG,
+	SHORT,
+	FLOAT,
+	DOUBLE,
+	NUMERIC,
+	DEFAULT,
+	DATE,
+	TIME,
+	TIMESTAMP,
+	TYPE_DATE,
+	TYPE_TIME,
+	TYPE_TIMESTAMP,
+	INTERVAL_YEAR,
+	INTERVAL_MONTH,
+	INTERVAL_DAY,
+	INTERVAL_HOUR,
+	INTERVAL_MINUTE,
+	INTERVAL_SECOND,
+	INTERVAL_YEAR_TO_MONTH,
+	INTERVAL_DAY_TO_HOUR,
+	INTERVAL_DAY_TO_MINUTE,
+	INTERVAL_DAY_TO_SECOND,
+	INTERVAL_HOUR_TO_MINUTE,
+	INTERVAL_HOUR_TO_SECOND,
+	INTERVAL_MINUTE_TO_SECOND,
+	BINARY,
+	BIT,
+	SBIGINT,
+	UBIGINT,
+	TINYINT,
+	SLONG,
+	SSHORT,
+	STINYINT,
+	ULONG,
+	USHORT,
+	UTINYINT,
+	BOOKMARK,
+	GUID,
+	VARBOOKMARK
+}
+
 [CCode (cname = "void", free_function = "SQLFREESTMTHANDLE")]
 [Compact]
 public class StatementHandle {
@@ -156,6 +200,10 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLFetch")]
 	public Return fetch ();
+
+	[CCode (cname = "SQLBindCol")]
+	public Return bind_column (ushort column_number, DataType target_type,
+		void* target_value, long buffer_length, out long str_len_or_ind);
 }
 
 }

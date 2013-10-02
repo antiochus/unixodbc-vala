@@ -31,7 +31,8 @@ public errordomain UnixOdbcError {
 	DRIVERS,
 	DRIVER_CONNECT,
 	EXECUTE_DIRECT,
-	NUMBER_RESULT_COLUMNS
+	NUMBER_RESULT_COLUMNS,
+	BIND_COLUMN
 }
 
 bool succeeded (Return ret) {
@@ -166,23 +167,42 @@ public class Connection {
 	}
 }
 
+public class Field {
+	public char[] data = new char[256];
+}
+
 public class Record {
+	public ArrayList<Field> fields;
+
+	public Record (ArrayList<Field> fields) {
+		this.fields = fields;
+	}
 }
 
 public class RecordIterator {
 	public Statement statement { get; private set; }
+	private ArrayList<Field> fields;
 
-	public RecordIterator (Statement statement) {
+	public RecordIterator (Statement statement) throws UnixOdbcError {
 		this.statement = statement;
+		int count = statement.get_column_count ();
+		fields = new ArrayList<Field> ();
+		for (int i = 1; i <= count; i++) {
+			Field field = new Field ();
+			fields.add (field);
+			long str_len_or_ind;
+			if (!succeeded (statement.handle.bind_column ((ushort) i, DataType.CHAR, (void *) field.data, field.data.length, out str_len_or_ind))) {
+				throw new UnixOdbcError.BIND_COLUMN ("Could not bind colun: " + statement.get_diagnostic_text ());
+			}
+		}
 	}
 
-	public Record? next_value () {
-		if (succeeded (statement.handle.fetch ())) {
-			return new Record ();
-		}
-		else {
-			return null;
-		}
+	public bool next () {
+		return succeeded (statement.handle.fetch ());
+	}
+
+	public Record get () {
+		return new Record (fields);
 	}
 }
 
@@ -198,7 +218,7 @@ public class Statement {
 		}
 	}
 
-	private string get_diagnostic_text () {
+	internal string get_diagnostic_text () {
 		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
 	}
 
@@ -216,7 +236,7 @@ public class Statement {
 		return count;
 	}
 
-	public RecordIterator iterator () {
+	public RecordIterator iterator () throws UnixOdbcError {
 		return new RecordIterator (this);
 	}
 }
