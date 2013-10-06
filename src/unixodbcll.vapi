@@ -31,11 +31,13 @@ public enum Return {
 
 // EnvironmentHandle -----------------------------------------------------------
 
-[CCode (cname = "int", cprefix = "SQL_ATTR_")]
+[CCode (cname = "SQLINTEGER", cprefix = "SQL_ATTR_")]
 public enum Attribute {
 	ODBC_VERSION
 }
 
+// There is no exact ODBC data type that is unsigned long for 32 and 64 bits
+// The constant is defined as UL, so use unsigned long as the cname
 [CCode (cname = "unsigned long", cprefix = "SQL_OV_")]
 public enum OdbcVersion {
 	ODBC3
@@ -78,7 +80,7 @@ public class EnvironmentHandle {
 [CCode (cname = "SQLHWND")]
 public struct Hwnd : long { }
 
-[CCode (cname = "unsinged short", cprefix = "SQL_DRIVER_")]
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DRIVER_")]
 public enum DriverCompletion {
 	NOPROMPT,
 	COMPLETE,
@@ -111,7 +113,7 @@ public class ConnectionHandle {
 
 // StatementHandle -------------------------------------------------------------
 
-[CCode (cname = "unsinged short", cprefix = "SQL_DESC_")]
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DESC_")]
 public enum ColumnDescriptor {
 	COUNT,
 	TYPE,
@@ -129,8 +131,8 @@ public enum ColumnDescriptor {
 	ALLOC_TYPE
 }
 
-[CCode (cname = "unsigned short", cprefix = "SQL_C_")]
-public enum DataType {
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_C_")]
+public enum CDataType {
 	CHAR,
 	LONG,
 	SHORT,
@@ -170,7 +172,58 @@ public enum DataType {
 	UTINYINT,
 	BOOKMARK,
 	GUID,
-	VARBOOKMARK
+	VARBOOKMARK,
+	WCHAR
+}
+
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_")]
+public enum DataType {
+	CHAR,
+	VARCHAR,
+	LONGVARCHAR,
+	WCHAR,
+	WVARCHAR,
+	WLONGVARCHAR,
+	DECIMAL,
+	NUMERIC,
+	SMALLINT,
+	INTEGER,
+	REAL,
+	FLOAT,
+	DOUBLE,
+	BIT,
+	TINYINT,
+	BIGINT,
+	BINARY,
+	VARBINARY,
+	LONGVARBINARY,
+	TYPE_DATE,
+	TYPE_TIME,
+	TYPE_TIMESTAMP,
+	TYPE_UTCDATETIME,
+	TYPE_UTCTIME,
+	INTERVAL_MONTH,
+	INTERVAL_YEAR,
+	INTERVAL_YEAR_TO_MONTH,
+	INTERVAL_DAY,
+	INTERVAL_HOUR,
+	INTERVAL_MINUTE,
+	INTERVAL_SECOND,
+	INTERVAL_DAY_TO_HOUR,
+	INTERVAL_DAY_TO_MINUTE,
+	INTERVAL_DAY_TO_SECOND,
+	INTERVAL_HOUR_TO_MINUTE,
+	INTERVAL_HOUR_TO_SECOND,
+	INTERVAL_MINUTE_TO_SECOND,
+	GUID
+}
+
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_PARAM_")]
+public enum InputOutputType {
+	INPUT,
+	INPUT_OUTPUT,
+	OUTPUT,
+	OUTPUT_STREAM
 }
 
 [CCode (cname = "void", free_function = "SQLFREESTMTHANDLE")]
@@ -190,6 +243,13 @@ public class StatementHandle {
 	public Return execute_direct (
 		[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
 
+	[CCode (cname = "SQLPrepare")]
+	public Return prepare (
+		[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
+
+	[CCode (cname = "SQLExecute")]
+	public Return execute ();
+
 	[CCode (cname = "SQLNumResultCols")]
 	public Return number_of_result_columns (out short column_count);
 
@@ -202,8 +262,14 @@ public class StatementHandle {
 	public Return fetch ();
 
 	[CCode (cname = "SQLBindCol")]
-	public Return bind_column (ushort column_number, DataType target_type,
-		void* target_value, long buffer_length, out long str_len_or_ind);
+	public Return bind_column (ushort column_number, CDataType target_type,
+		void* target_value, long buffer_length, out long length_or_indicator);
+
+	[CCode (cname = "SQLBindParameter")]
+	public Return bind_parameter (ushort parameter_number,
+		InputOutputType input_output_type, CDataType value_type,
+		DataType parameter_type, ulong column_size, short decimals_digits,
+		void* parameter_value, long buffer_length, out long length_or_indicator);
 }
 
 }

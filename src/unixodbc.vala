@@ -165,10 +165,17 @@ public class Connection {
 			assert( succeeded (handle.disconnect ()));
 		}
 	}
+
+	public void execute (string text) throws UnixOdbcError {
+		var statement = new Statement (this);
+		statement.text = text;
+		statement.execute ();
+	}
 }
 
 public class Field {
-	public char[] data = new char[256];
+	public uint8[] data = new uint8[256];
+	public long length_or_indicator;
 }
 
 public class Record {
@@ -190,8 +197,10 @@ public class RecordIterator {
 		for (int i = 1; i <= count; i++) {
 			Field field = new Field ();
 			fields.add (field);
-			long str_len_or_ind;
-			if (!succeeded (statement.handle.bind_column ((ushort) i, DataType.CHAR, (void *) field.data, field.data.length, out str_len_or_ind))) {
+			// Binding to DataType.CHAR will use the ANSI codepage of the ODBC driver
+			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
+			// TODO: For other drivers there should be GLib.IConv support
+			if (!succeeded (statement.handle.bind_column ((ushort) i, CDataType.CHAR, (void *) field.data, field.data.length, out field.length_or_indicator))) {
 				throw new UnixOdbcError.BIND_COLUMN ("Could not bind colun: " + statement.get_diagnostic_text ());
 			}
 		}
