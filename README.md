@@ -3,12 +3,12 @@ unixodbc-vala
 
 Vala bindings for unixODBC.
 
-This projects consists of two bindings around the unixODBC API:
+This projects consists of two bindings for the unixODBC API:
 
 The low level binding (namespace `UnixOdbcLL`)
 ----------------------------------------------
 
-This binding intends to make the orignal C functions available in a Vala 
+This binding intends to make the orignal C API available in a Vala 
 friendly format. It can be used to port ODBC code from C to Vala.
 
 It gets rid of the original naming conventions (e.g. SQLBindCol is 
@@ -34,11 +34,13 @@ StatementHandle.allocate (connection, out statement);
 statement.execute_direct (code);
 ```
 
-The high level binding (namespace `UnixOdbc`):
-----------------------------------------------
+The high level binding (namespace `UnixOdbc`)
+---------------------------------------------
 
 Since unixODBC is pretty hard to use this namespace consists of real
 Vala classes with an errordomain and some more fancy stuff.
+
+It is built on top of `UnixOdbcLL`.
 
 Example:
 
