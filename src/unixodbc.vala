@@ -35,10 +35,6 @@ public errordomain UnixOdbcError {
 	BIND_COLUMN
 }
 
-bool succeeded (Return ret) {
-	return (ret == Return.SUCCESS || ret == Return.SUCCESS_WITH_INFO);
-}
-
 public class Driver {
 	public string name { get; private set; }
 	public Map<string, string> attributes { get; private set; }

@@ -29,6 +29,10 @@ public enum Return {
 	INVALID_HANDLE
 }
 
+public bool succeeded (Return ret) {
+	return (ret == Return.SUCCESS || ret == Return.SUCCESS_WITH_INFO);
+}
+
 // EnvironmentHandle -----------------------------------------------------------
 
 [CCode (cname = "SQLINTEGER", cprefix = "SQL_ATTR_")]
