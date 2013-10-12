@@ -1,4 +1,4 @@
-/* -*- Mode: C; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
+/* -*- Mode: vala; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
  * unixodbc-vala - Vala Bindings for unixODBC
  * Copyright (C) 2013 Jens Mühlenhoff <j.muehlenhoff@gmx.de>
@@ -8,7 +8,7 @@
  * Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
  * 
- * dbdiadesign is distributed in the hope that it will be useful, but
+ * unixodbc-vala is distributed in the hope that it will be useful, but
  * WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
  * See the GNU General Public License for more details.
@@ -21,12 +21,13 @@
 // Low level adaption
 namespace UnixOdbcLL {
 
-[CCode (cname = "SQLRETURN", cprefix = "SQL_")]
+[CCode (cname = "SQLRETURN", cprefix = "SQL_", has_type_id = false)]
 public enum Return {
 	SUCCESS,
 	SUCCESS_WITH_INFO,
 	ERROR,
-	INVALID_HANDLE
+	INVALID_HANDLE,
+	NO_DATA
 }
 
 public bool succeeded (Return ret) {
@@ -35,19 +36,19 @@ public bool succeeded (Return ret) {
 
 // EnvironmentHandle -----------------------------------------------------------
 
-[CCode (cname = "SQLINTEGER", cprefix = "SQL_ATTR_")]
+[CCode (cname = "SQLINTEGER", cprefix = "SQL_ATTR_", has_type_id = false)]
 public enum Attribute {
 	ODBC_VERSION
 }
 
 // There is no exact ODBC data type that is unsigned long for 32 and 64 bits
 // The constant is defined as UL, so use unsigned long as the cname
-[CCode (cname = "unsigned long", cprefix = "SQL_OV_")]
+[CCode (cname = "unsigned long", cprefix = "SQL_OV_", has_type_id = false)]
 public enum OdbcVersion {
 	ODBC3
 }
 
-[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_FETCH_")]
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_FETCH_", has_type_id = false)]
 public enum FetchDirection {
 	NEXT,
 	FIRST,
@@ -57,7 +58,7 @@ public enum FetchDirection {
 	RELATIVE
 }
 
-[CCode (cname = "void", free_function = "SQLFREEENVHANDLE")]
+[CCode (cname = "void", free_function = "SQLFREEENVHANDLE", has_type_id = false)]
 [Compact]
 public class EnvironmentHandle {
 	[CCode (cname = "SQLALLOCENVHANDLE")]
@@ -66,25 +67,23 @@ public class EnvironmentHandle {
 	[CCode (cname = "SQLENVGETDIAGREC")]
 	public Return get_diagnostic_record (
 		short record_number, [CCode (array_length = false)] uint8[] state,
-		out int native_error,
-		[CCode (array_length = true, array_pos = 5.1)] uint8[] message_text,
-		out short text_length);
+		out int native_error, uint8[] message_text, out short text_length);
 
 	[CCode (cname = "SQLSetEnvAttr")]
 	public Return set_attribute (Attribute attribute, void* value, int string_length);
 
 	[CCode (cname = "SQLDrivers")]
 	public Return get_drivers (FetchDirection direction,
-		[CCode (array_length = true, array_pos = 2.1)] uint8[] name, out short name_ret,
-		[CCode (array_length = true, array_pos = 4.1)] uint8[] attributes, out short attribute_ret);
+		uint8[] name, out short name_ret,
+		uint8[] attributes, out short attribute_ret);
 }
 
 // ConnectionHandle ------------------------------------------------------------
 
-[CCode (cname = "SQLHWND")]
+[CCode (cname = "SQLHWND", has_type_id = false)]
 public struct Hwnd : long { }
 
-[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DRIVER_")]
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DRIVER_", has_type_id = false)]
 public enum DriverCompletion {
 	NOPROMPT,
 	COMPLETE,
@@ -92,7 +91,7 @@ public enum DriverCompletion {
 	COMPLETE_REQUIRED
 }
 
-[CCode (cname = "void", free_function = "SQLFREEDBCHANDLE")]
+[CCode (cname = "void", free_function = "SQLFREEDBCHANDLE", has_type_id = false)]
 [Compact]
 public class ConnectionHandle {
 	[CCode (cname = "SQLALLOCDBCHANDLE")]
@@ -117,7 +116,7 @@ public class ConnectionHandle {
 
 // StatementHandle -------------------------------------------------------------
 
-[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DESC_")]
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DESC_", has_type_id = false)]
 public enum ColumnDescriptor {
 	COUNT,
 	TYPE,
@@ -135,7 +134,7 @@ public enum ColumnDescriptor {
 	ALLOC_TYPE
 }
 
-[CCode (cname = "SQLSMALLINT", cprefix = "SQL_C_")]
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_C_", has_type_id = false)]
 public enum CDataType {
 	CHAR,
 	LONG,
@@ -180,7 +179,7 @@ public enum CDataType {
 	WCHAR
 }
 
-[CCode (cname = "SQLSMALLINT", cprefix = "SQL_")]
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_", has_type_id = false)]
 public enum DataType {
 	CHAR,
 	VARCHAR,
@@ -222,7 +221,7 @@ public enum DataType {
 	GUID
 }
 
-[CCode (cname = "SQLSMALLINT", cprefix = "SQL_PARAM_")]
+[CCode (cname = "SQLSMALLINT", cprefix = "SQL_PARAM_", has_type_id = false)]
 public enum InputOutputType {
 	INPUT,
 	INPUT_OUTPUT,
@@ -230,7 +229,7 @@ public enum InputOutputType {
 	OUTPUT_STREAM
 }
 
-[CCode (cname = "void", free_function = "SQLFREESTMTHANDLE")]
+[CCode (cname = "void", free_function = "SQLFREESTMTHANDLE", has_type_id = false)]
 [Compact]
 public class StatementHandle {
 	[CCode (cname = "SQLALLOCSTMTHANDLE")]
@@ -259,7 +258,7 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLColAttribute")]
 	public Return column_attribute (ushort column_number,
-		ColumnDescriptor field_identifier, void* character_attribute, 
+		ColumnDescriptor field_identifier, void *character_attribute, 
 		short buffer_length, out short string_length, out long numeric_attribute);
 
 	[CCode (cname = "SQLFetch")]
@@ -267,13 +266,13 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindCol")]
 	public Return bind_column (ushort column_number, CDataType target_type,
-		void* target_value, long buffer_length, out long length_or_indicator);
+		void *target_value, long buffer_length, long *length_or_indicator);
 
 	[CCode (cname = "SQLBindParameter")]
 	public Return bind_parameter (ushort parameter_number,
 		InputOutputType input_output_type, CDataType value_type,
 		DataType parameter_type, ulong column_size, short decimals_digits,
-		void* parameter_value, long buffer_length, out long length_or_indicator);
+		void *parameter_value, long buffer_length, long *length_or_indicator);
 }
 
 }
