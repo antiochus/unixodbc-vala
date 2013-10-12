@@ -18,11 +18,12 @@
  */
 
 using GLib;
+using UnixOdbcLL;
 
 namespace UnixOdbc {
 
 public class DoubleParameter : Parameter {
-	internal double value;
+	private double value;
 
 	public override string? get_as_string () {
 		if (length_or_indicator == -1) {
@@ -31,10 +32,6 @@ public class DoubleParameter : Parameter {
 		else {
 			return value.to_string ();
 		}
-	}
-
-	internal override void* get_data_pointer () {
-		return &value;
 	}
 
 	public DoubleParameter (string name, double? value) {
@@ -46,6 +43,32 @@ public class DoubleParameter : Parameter {
 			this.value = (!) value;
 			length_or_indicator = 0;
 		}
+	}
+
+	internal override void* get_data_pointer () {
+		return &value;
+	}
+
+	internal override long get_data_length () {
+		return 0;
+	}
+
+	internal override ulong get_column_size () {
+		return 0;
+	}
+
+	internal override short get_decimal_digits () {
+		return 0;
+	}
+
+	internal override CDataType get_c_data_type () {
+		return CDataType.DOUBLE;
+	}
+
+	internal override DataType get_sql_data_type () {
+		// TODO: This doesn't work when the SQL data type is NUMERIC (exact numeric)
+		// Maybe introduce a DecimalParameter, based on the SQL_NUMERIC_STRUCT data type
+		return DataType.FLOAT;
 	}
 }
 

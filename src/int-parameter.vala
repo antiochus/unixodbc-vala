@@ -18,11 +18,12 @@
  */
 
 using GLib;
+using UnixOdbcLL;
 
 namespace UnixOdbc {
 
 public class IntParameter : Parameter {
-	internal int value;
+	private int value;
 
 	public override string? get_as_string () {
 		if (length_or_indicator == -1) {
@@ -31,10 +32,6 @@ public class IntParameter : Parameter {
 		else {
 			return value.to_string ();
 		}
-	}
-
-	internal override void* get_data_pointer () {
-		return &value;
 	}
 
 	public IntParameter (string name, int? value) {
@@ -46,6 +43,30 @@ public class IntParameter : Parameter {
 			this.value = (!) value;
 			length_or_indicator = 0;
 		}
+	}
+
+	internal override void* get_data_pointer () {
+		return &value;
+	}
+
+	internal override long get_data_length () {
+		return 0;
+	}
+
+	internal override ulong get_column_size () {
+		return 0;
+	}
+
+	internal override short get_decimal_digits () {
+		return 0;
+	}
+
+	internal override CDataType get_c_data_type () {
+		return CDataType.LONG;
+	}
+
+	internal override DataType get_sql_data_type () {
+		return DataType.INTEGER;
 	}
 }
 

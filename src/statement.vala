@@ -70,58 +70,47 @@ public class Statement {
 		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
 	}
 
+	private void bind_parameter (Parameter parameter, ushort number) throws UnixOdbcError {
+		if (!succeeded (handle.bind_parameter (number, InputOutputType.INPUT, 
+			parameter.get_c_data_type (), parameter.get_sql_data_type (),
+			parameter.get_column_size (), parameter.get_decimal_digits (),
+			parameter.get_data_pointer (), parameter.get_data_length (), 
+			&parameter.length_or_indicator))) {
+			throw new UnixOdbcError.BIND_PARAMETER ("Could not bind parameter: " + get_diagnostic_text());
+		}
+	}
+
+	private void bind_parameters () throws UnixOdbcError {
+		for (int i = 0; i < parameters.size; i++) {
+			bind_parameter(parameters[i], (ushort) i + 1);
+		}
+	}
+
+	private void execute_direct (string text) throws UnixOdbcError {
+		Return retval = handle.execute_direct ((uint8[]) text.data);
+		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
+			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not directly execute statement: " + get_diagnostic_text());
+		}
+	}
+
+	/* TODO: Provide public prepare and reexecute prepared API
+	private void execute_prepared () throws UnixOdbcError {
+		Return retval = handle.execute ();
+		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
+			throw new UnixOdbcError.EXECUTE ("Could not execute statement: " + get_diagnostic_text());
+		}
+	}
+
+	private void prepare () throws UnixOdbcError {
+		if (!succeeded (handle.prepare ((uint8[]) text.data))) {
+			throw new UnixOdbcError.PREPARE ("Could not prepare statement: " + get_diagnostic_text());
+		}
+	}
+	*/
+
 	public void execute () throws UnixOdbcError {
-		if (parameters.is_empty) {
-			Return retval = handle.execute_direct ((uint8[]) text.data);
-			if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-				throw new UnixOdbcError.EXECUTE_DIRECT ("Could not directly execute statement: " + get_diagnostic_text());
-			}
-		}
-		else {
-			if (!succeeded (handle.prepare ((uint8[]) text.data))) {
-				throw new UnixOdbcError.PREPARE ("Could not prepare statement: " + get_diagnostic_text());
-			}
-			for (int i = 0; i < parameters.size; i++) {
-				var parameter = parameters[i];
-				if (parameter is IntParameter) {
-					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
-						CDataType.LONG, DataType.INTEGER, 0, 0,
-						&((IntParameter) parameter).value, 0,
-						&parameter.length_or_indicator);
-				}
-				else if (parameter is DoubleParameter) {
-					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
-						CDataType.DOUBLE, DataType.FLOAT, 0, 0,
-						&((DoubleParameter) parameter).value, 0,
-						&parameter.length_or_indicator);
-				}
-				else if (parameter is StringParameter) {
-					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
-						CDataType.CHAR, DataType.CHAR, ((StringParameter) parameter).value.data.length, 0,
-						((StringParameter) parameter).value.data, ((StringParameter) parameter).value.data.length,
-						&parameter.length_or_indicator);
-				}
-				else if (parameter is DateTimeParameter) {
-					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
-						CDataType.CHAR, DataType.TYPE_TIMESTAMP, 0, 3,
-						((DateTimeParameter) parameter).value.data, ((DateTimeParameter) parameter).value.data.length,
-						&parameter.length_or_indicator);
-				}
-				else if (parameter is BytesParameter) {
-					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
-						CDataType.BINARY, DataType.BINARY, ((BytesParameter) parameter).value.length, 0,
-						((BytesParameter) parameter).value, ((BytesParameter) parameter).value.length,
-						&parameter.length_or_indicator);
-				}
-				else {
-					assert_not_reached ();
-				}
-			}
-			Return retval = handle.execute ();
-			if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-				throw new UnixOdbcError.EXECUTE ("Could not execute statement: " + get_diagnostic_text());
-			}
-		}
+		bind_parameters ();
+		execute_direct (text);
 	}
 
 	public int get_column_count () throws UnixOdbcError {

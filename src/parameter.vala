@@ -18,18 +18,25 @@
  */
 
 using GLib;
+using UnixOdbcLL;
 
 namespace UnixOdbc {
 
 public abstract class Parameter {
 	public abstract string? get_as_string ();
 	public string name;
-	internal long length_or_indicator;
-	internal abstract void* get_data_pointer ();
 		
 	public Parameter (string name) {
 		this.name  = name;
 	}
+
+	internal long length_or_indicator;
+	internal abstract void* get_data_pointer ();
+	internal abstract long get_data_length ();
+	internal abstract ulong get_column_size ();
+	internal abstract short get_decimal_digits ();
+	internal abstract CDataType get_c_data_type ();
+	internal abstract DataType get_sql_data_type ();
 }
 
 }

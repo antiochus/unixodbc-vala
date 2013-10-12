@@ -18,11 +18,12 @@
  */
 
 using GLib;
+using UnixOdbcLL;
 
 namespace UnixOdbc {
 
 public class BytesParameter : Parameter {
-	internal uchar[] value;
+	private uchar[] value;
 
 	public override string? get_as_string () {
 		if (length_or_indicator == -1) {
@@ -40,10 +41,6 @@ public class BytesParameter : Parameter {
 		}
 	}
 
-	internal override void* get_data_pointer () {
-		return value;
-	}
-
 	public BytesParameter (string name, uchar[]? value) {
 		base (name);
 		if (value == null) {
@@ -53,6 +50,30 @@ public class BytesParameter : Parameter {
 			this.value = (!) value;
 			length_or_indicator = this.value.length;
 		}
+	}
+
+	internal override void* get_data_pointer () {
+		return value;
+	}
+
+	internal override long get_data_length () {
+		return value.length;
+	}
+
+	internal override ulong get_column_size () {
+		return value.length;
+	}
+
+	internal override short get_decimal_digits () {
+		return 0;
+	}
+
+	internal override CDataType get_c_data_type () {
+		return CDataType.BINARY;
+	}
+
+	internal override DataType get_sql_data_type () {
+		return DataType.BINARY;
 	}
 }
 
