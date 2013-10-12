@@ -82,6 +82,7 @@ public class Statement {
 				throw new UnixOdbcError.PREPARE ("Could not prepare statement: " + get_diagnostic_text());
 			}
 			for (int i = 0; i < parameters.size; i++) {
+				var parameter = parameters[i];
 				if (parameter is IntParameter) {
 					handle.bind_parameter ((ushort) i + 1, InputOutputType.INPUT,
 						CDataType.LONG, DataType.INTEGER, 0, 0,

@@ -21,14 +21,31 @@ using GLib;
 
 namespace UnixOdbc {
 
-public abstract class Parameter {
-	public abstract string? get_as_string ();
-	public string name;
-	internal long length_or_indicator;
-	internal abstract void* get_data_pointer ();
-		
-	public Parameter (string name) {
-		this.name  = name;
+public class DoubleParameter : Parameter {
+	internal double value;
+
+	public override string? get_as_string () {
+		if (length_or_indicator == -1) {
+			return null;
+		} 
+		else {
+			return value.to_string ();
+		}
+	}
+
+	internal override void* get_data_pointer () {
+		return &value;
+	}
+
+	public DoubleParameter (string name, double? value) {
+		base (name);
+		if (value == null) {
+			length_or_indicator = -1;
+		}
+		else {
+			this.value = (!) value;
+			length_or_indicator = 0;
+		}
 	}
 }
 
