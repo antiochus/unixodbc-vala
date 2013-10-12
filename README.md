@@ -51,7 +51,8 @@ try {
 	Connection connection = new Connection (environment);
 	connection.open ("DSN=MyDataSource;UID=MyUserName;PWD=MyPassword");
 	Statement statement = new Statement (connection);
-	statement.text = "SELECT * FROM INFORMATION_SCHEMA.TABLES"
+	statement.text = "SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = ?";
+	statement.add_string_parameter ("TableName", "mytable");
 	statement.execute ();
 	foreach (var record in statement) {
 		foreach (var field in record) {
