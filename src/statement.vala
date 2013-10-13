@@ -23,35 +23,6 @@ using UnixOdbcLL;
 
 namespace UnixOdbc {
 
-public class RecordIterator {
-	public Statement statement { get; private set; }
-	private ArrayList<Field> fields;
-
-	public RecordIterator (Statement statement) throws UnixOdbcError {
-		this.statement = statement;
-		int count = statement.get_column_count ();
-		fields = new ArrayList<Field> ();
-		for (int i = 1; i <= count; i++) {
-			Field field = new Field ();
-			fields.add (field);
-			// Binding to DataType.CHAR will use the ANSI codepage of the ODBC driver
-			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
-			// TODO: For other drivers there should be GLib.IConv support
-			if (!succeeded (statement.handle.bind_column ((ushort) i, CDataType.CHAR, (void *) field.data, field.data.length, &field.length_or_indicator))) {
-				throw new UnixOdbcError.BIND_COLUMN ("Could not bind colun: " + statement.get_diagnostic_text ());
-			}
-		}
-	}
-
-	public bool next () {
-		return succeeded (statement.handle.fetch ());
-	}
-
-	public Record get () {
-		return new Record (fields);
-	}
-}
-
 public class Statement {
 	internal StatementHandle handle;
 	public Connection connection { get; private set; }
