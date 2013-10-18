@@ -34,7 +34,10 @@ private string get_diagnostic_record (GetDiagnosticRecord d) {
 	// A function call can generate multiple diagnostic records
 	short i = 1;
 	while (succeeded (d (i++, state, out native_error, message_text, out text_len))) {
-		sb.append ("state = %s, native_error = %d, message = %s\n".printf ((string) state, native_error, (string) message_text));
+		sb.append ("\n---\n");
+		sb.append ("state        : %s\n".printf ((string) state));
+		sb.append ("native_error : %d\n".printf (native_error));
+		sb.append ("message      : %s\n".printf ((string) message_text));
 	}
 	return sb.str;
 }

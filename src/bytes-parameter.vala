@@ -41,8 +41,8 @@ public class BytesParameter : Parameter {
 		}
 	}
 
-	public BytesParameter (string name, uchar[]? value) {
-		base (name);
+	public BytesParameter (uchar[]? value) {
+		base ();
 		if (value == null) {
 			length_or_indicator = -1;
 		}

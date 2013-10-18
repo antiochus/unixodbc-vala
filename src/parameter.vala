@@ -24,12 +24,6 @@ namespace UnixOdbc {
 
 public abstract class Parameter {
 	public abstract string? get_as_string ();
-	public string name;
-		
-	public Parameter (string name) {
-		this.name  = name;
-	}
-
 	internal long length_or_indicator;
 	internal abstract void* get_data_pointer ();
 	internal abstract long get_data_length ();

@@ -34,8 +34,8 @@ public class DoubleParameter : Parameter {
 		}
 	}
 
-	public DoubleParameter (string name, double? value) {
-		base (name);
+	public DoubleParameter (double? value) {
+		base ();
 		if (value == null) {
 			length_or_indicator = -1;
 		}

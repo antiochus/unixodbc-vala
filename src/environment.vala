@@ -25,9 +25,9 @@ namespace UnixOdbc {
 public class Environment {
 	internal EnvironmentHandle handle;
 	
-	public Environment () throws UnixOdbcError {
+	public Environment () throws Error {
 		if (!succeeded (EnvironmentHandle.allocate (out handle))) {
-			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate environment handle");
+			throw new Error.ALLOCATE_HANDLE ("Could not allocate environment handle");
 		}
 		set_odbc_version (OdbcVersion.ODBC3);
 	}
@@ -80,9 +80,9 @@ public class Environment {
 		return result;
 	}
 	
-	private void set_odbc_version (OdbcVersion value) throws UnixOdbcError {
+	private void set_odbc_version (OdbcVersion value) throws Error {
 		if (!succeeded (handle.set_attribute (Attribute.ODBC_VERSION, (void *) value, 0))) {
-			throw new UnixOdbcError.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute: " + get_diagnostic_text ());
+			throw new Error.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute: " + get_diagnostic_text ());
 		}
 	} 
 }

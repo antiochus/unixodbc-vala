@@ -21,7 +21,7 @@ using GLib;
 
 namespace UnixOdbc {
 
-public errordomain UnixOdbcError {
+public errordomain Error {
 	ALLOCATE_HANDLE,
 	FREE_HANDLE,
 	SET_ENVIRONMENT_ATTRIBUTE,

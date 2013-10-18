@@ -26,7 +26,7 @@ public class RecordIterator {
 	public Statement statement { get; private set; }
 	private ArrayList<Field> fields;
 
-	public RecordIterator (Statement statement) throws UnixOdbcError {
+	public RecordIterator (Statement statement) throws Error {
 		this.statement = statement;
 		int count = statement.get_column_count ();
 		fields = new ArrayList<Field> ();
@@ -37,7 +37,7 @@ public class RecordIterator {
 			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
 			// TODO: For other drivers there should be GLib.IConv support
 			if (!succeeded (statement.handle.bind_column ((ushort) i, CDataType.CHAR, (void *) field.data, field.data.length, &field.length_or_indicator))) {
-				throw new UnixOdbcError.BIND_COLUMN ("Could not bind colun: " + statement.get_diagnostic_text ());
+				throw new Error.BIND_COLUMN ("Could not bind colun: " + statement.get_diagnostic_text ());
 			}
 		}
 	}

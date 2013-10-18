@@ -24,16 +24,17 @@ using UnixOdbcLL;
 namespace UnixOdbc {
 
 public class Statement {
+	private bool result;
 	internal StatementHandle handle;
 	public Connection connection { get; private set; }
 	public string text { get; set; }
 	public ArrayList<Parameter> parameters { get; private set; }
 
-	public Statement (Connection connection) throws UnixOdbcError {
+	public Statement (Connection connection) throws Error {
 		parameters = new ArrayList<Parameter> ();
 		this.connection = connection;
 		if (!succeeded (StatementHandle.allocate (connection.handle, out handle))) {
-			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate statement handle");
+			throw new Error.ALLOCATE_HANDLE ("Could not allocate statement handle");
 		}
 	}
 
@@ -41,87 +42,92 @@ public class Statement {
 		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
 	}
 
-	private void bind_parameter (Parameter parameter, ushort number) throws UnixOdbcError {
+	private void bind_parameter (Parameter parameter, ushort number) throws Error {
 		if (!succeeded (handle.bind_parameter (number, InputOutputType.INPUT, 
 			parameter.get_c_data_type (), parameter.get_sql_data_type (),
 			parameter.get_column_size (), parameter.get_decimal_digits (),
 			parameter.get_data_pointer (), parameter.get_data_length (), 
 			&parameter.length_or_indicator))) {
-			throw new UnixOdbcError.BIND_PARAMETER ("Could not bind parameter: " + get_diagnostic_text());
+			throw new Error.BIND_PARAMETER ("Could not bind parameter: " + get_diagnostic_text());
 		}
 	}
 
-	private void bind_parameters () throws UnixOdbcError {
+	private void bind_parameters () throws Error {
 		for (int i = 0; i < parameters.size; i++) {
 			bind_parameter(parameters[i], (ushort) i + 1);
 		}
 	}
 
-	private void execute_direct (string text) throws UnixOdbcError {
+	private void execute_direct (string text) throws Error {
 		Return retval = handle.execute_direct ((uint8[]) text.data);
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-			throw new UnixOdbcError.EXECUTE_DIRECT ("Could not directly execute statement: " + get_diagnostic_text());
+			throw new Error.EXECUTE_DIRECT ("SQLExecDirect" + get_diagnostic_text());
 		}
+		result = retval != Return.NO_DATA;
+	}
+
+	public bool has_result () {
+		return result;
 	}
 
 	/* TODO: Provide public prepare and reexecute prepared API
-	private void execute_prepared () throws UnixOdbcError {
+	private void execute_prepared () throws Error {
 		Return retval = handle.execute ();
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
 			throw new UnixOdbcError.EXECUTE ("Could not execute statement: " + get_diagnostic_text());
 		}
 	}
 
-	private void prepare () throws UnixOdbcError {
+	private void prepare () throws Error {
 		if (!succeeded (handle.prepare ((uint8[]) text.data))) {
 			throw new UnixOdbcError.PREPARE ("Could not prepare statement: " + get_diagnostic_text());
 		}
 	}
 	*/
 
-	public void execute () throws UnixOdbcError {
+	public void execute () throws Error {
 		bind_parameters ();
 		execute_direct (text);
 	}
 
-	public int get_column_count () throws UnixOdbcError {
+	public int get_column_count () throws Error {
 		short count;
 		if (!succeeded (handle.number_of_result_columns (out count))) {
-			throw new UnixOdbcError.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
+			throw new Error.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
 		}
 		return count;
 	}
 
-	public RecordIterator iterator () throws UnixOdbcError {
+	public RecordIterator iterator () throws Error {
 		return new RecordIterator (this);
 	}
 
-	public IntParameter add_int_parameter (string name, int? value) {
-		var parameter = new IntParameter (name, value);
+	public IntParameter add_int_parameter (int? value) {
+		var parameter = new IntParameter (value);
 		parameters.add (parameter);
 		return parameter;
 	}
 
-	public DoubleParameter add_double_parameter (string name, double? value) {
-		var parameter = new DoubleParameter (name, value);
+	public DoubleParameter add_double_parameter (double? value) {
+		var parameter = new DoubleParameter (value);
 		parameters.add (parameter);
 		return parameter;
 	}
 
-	public StringParameter add_string_parameter (string name, string? value) {
-		var parameter = new StringParameter (name, value);
+	public StringParameter add_string_parameter (string? value) {
+		var parameter = new StringParameter (value);
 		parameters.add (parameter);
 		return parameter;
 	}
 
-	public BytesParameter add_bytes_parameter (string name, uchar[]? value) {
-		var parameter = new BytesParameter (name, value);
+	public BytesParameter add_bytes_parameter (uchar[]? value) {
+		var parameter = new BytesParameter (value);
 		parameters.add (parameter);
 		return parameter;
 	}
 
-	public DateTimeParameter add_datetime_parameter (string name, DateTime? value) {
-		var parameter = new DateTimeParameter (name, value);
+	public DateTimeParameter add_datetime_parameter (DateTime? value) {
+		var parameter = new DateTimeParameter (value);
 		parameters.add (parameter);
 		return parameter;
 	}

@@ -34,8 +34,8 @@ public class DateTimeParameter : Parameter {
 		}
 	}
 
-	public DateTimeParameter (string name, DateTime? value) {
-		base (name);
+	public DateTimeParameter (DateTime? value) {
+		base ();
 		if (value == null) {
 			length_or_indicator = -1;
 		}

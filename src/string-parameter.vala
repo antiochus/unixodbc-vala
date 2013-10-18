@@ -34,8 +34,8 @@ public class StringParameter : Parameter {
 		}
 	}
 
-	public StringParameter (string name, string? value) {
-		base (name);
+	public StringParameter (string? value) {
+		base ();
 		if (value == null) {
 			length_or_indicator = -1;
 		}

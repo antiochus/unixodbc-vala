@@ -28,10 +28,10 @@ public class Connection {
 	public Environment environment { get; private set; }
 	public string connection_string { get; set; }
 
-	public Connection (Environment environment) throws UnixOdbcError {
+	public Connection (Environment environment) throws Error {
 		this.environment = environment;
 		if (!succeeded (ConnectionHandle.allocate (environment.handle, out handle))) {
-			throw new UnixOdbcError.ALLOCATE_HANDLE ("Could not allocate environment handle");
+			throw new Error.ALLOCATE_HANDLE ("Could not allocate environment handle");
 		}
 	}
 
@@ -43,10 +43,10 @@ public class Connection {
 		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
 	}
 
-	public void open () throws UnixOdbcError {
+	public void open () throws Error {
 		uchar[] connstr = (uchar[]) connection_string.data;
 		if (!succeeded (handle.driver_connect (0, connstr, null, null, DriverCompletion.COMPLETE))) {
-			throw new UnixOdbcError.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text ());
+			throw new Error.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text ());
 		}
 		connected = true;
 	}
@@ -57,7 +57,7 @@ public class Connection {
 		}
 	}
 
-	public void execute (string text) throws UnixOdbcError {
+	public void execute (string text) throws Error {
 		var statement = new Statement (this);
 		statement.text = text;
 		statement.execute ();

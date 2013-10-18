@@ -34,8 +34,8 @@ public class IntParameter : Parameter {
 		}
 	}
 
-	public IntParameter (string name, int? value) {
-		base (name);
+	public IntParameter (int? value) {
+		base ();
 		if (value == null) {
 			length_or_indicator = -1;
 		}
