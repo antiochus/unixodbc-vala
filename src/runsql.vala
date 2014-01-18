@@ -21,111 +21,87 @@ using GLib;
 using UnixOdbc;
 using UnixOdbcLL;
 using Posix;
-using Readline;
 
-bool interactive;
+namespace RunSql {
 
-int eol_func (int count, int key) {
-	if (Readline.line_buffer.chomp ().up ().has_suffix ("\nGO")) {
-		Readline.done = 1;
-	}
-	else {
-		insert (count, '\n');
-	}
-	return 0;
-}
+internal class Main {
 
-string? get_statement () {
-	if (interactive) {
-		string? s = readline ("SQL> ");
-		if (s == null) {
-			return null;
+	Input input;
+	bool interactive;
+
+	internal Main () {
+		interactive = isatty (STDIN_FILENO);
+
+		if (interactive) {
+			input = new InteractiveInput ();
 		}
-		// Remove trailing whitespace and "GO"
-		string s2 = (!)s.chomp ();
-		s2 = s2.slice (0, s2.length - 2);
-		if (s2.strip () != "") {
-			Readline.History.add ((!)s);
+		else {
+			input = new NonInteractiveInput ();
 		}
-		GLib.stdout.printf ("\n");
-		return s2 + "\n";
 	}
-	else {
-		StringBuilder statement = new StringBuilder();
-		var buffer = new char[1024];
-		string? s = null;
-		while ((!GLib.stdin.eof ()) && ((s = GLib.stdin.gets (buffer)) != null)) {
-			string line = (!)s;
-			if (line.chomp ().up () != "GO") {
-				statement.append (line);
-				statement.append_c ('\n');
+	
+	private void show_records (Statement statement) throws UnixOdbc.Error, GLib.ConvertError {
+		if (!statement.has_result ()) {
+			return;
+		}
+		foreach (var record in statement) {
+			GLib.stdout.printf ("---\n");
+			foreach (var field in record.fields) {
+				GLib.stdout.printf ("%s : %s\n", field.name, field.get_as_string_default ("(null)"));
 			}
 		}
-		return statement.str;
 	}
-}
 
-void show_records (Statement statement) throws UnixOdbc.Error {
-	if (!statement.has_result ()) {
-		return;
-	}
-	foreach (var record in statement) {
-		GLib.stdout.printf ("---\n");
-		foreach (var field in record.fields) {
-			GLib.stdout.printf ("??? : %s\n", (string)field.data);
-		}
-	}
-}
-
-void run_statements (Connection connection) throws UnixOdbc.Error {
-	string? text;
-	while ((text = get_statement ()) != null) {
-		try {
-			// GLib.stdout.printf ((!)statement);
-			var statement = new Statement (connection);
-			statement.text = (!)text;
-			statement.execute ();
-			if (interactive) {
+	private void run_statements (Connection connection) throws UnixOdbc.Error, GLib.ConvertError {
+		string? text;
+		while ((text = input.get_statement ()) != null) {
+			try {
+				var statement = new Statement (connection);
+				statement.text = (!)text;
+				statement.execute ();
+				// if (interactive) {
 				show_records (statement);
+				// }
 			}
-		}
-		catch (UnixOdbc.Error e) {
-			GLib.stderr.printf (@"\n$(e.message)\n");
-			if (!interactive) {
-				break;
+			catch (UnixOdbc.Error e) {
+				GLib.stderr.printf (@"\n$(e.message)\n");
+				if (!interactive) {
+					break;
+				}
 			}
 		}
 	}
-}
 
-
-int main (string args[]) {
-
-	interactive = isatty (STDIN_FILENO);
-
-	if (interactive) {
-		Readline.readline_name = "runsql";
-		Readline.startup_hook = () => {
-			Readline.bind_key ('\r', eol_func);
-			Readline.bind_key ('\n', eol_func);
-			return 0;
-		};
-		Readline.History.using ();
-	}
-
-	try {
+	public void run () throws UnixOdbc.Error, GLib.ConvertError {
 		UnixOdbc.Environment environment = new UnixOdbc.Environment ();
+		environment.error_encoding = "ISO_8859-1";
+		environment.sql_encoding = "ISO_8859-1";
+		environment.verbose_errors = false;
 
 		Connection connection = new Connection (environment);
 		connection.connection_string = "DSN=MyDatabase;UID=MyUser;PWD=MyPassword";
 		connection.open ();
-
+		connection.execute ("USE vorm");
 		run_statements (connection);
+	}
+}
+
+int main (string args[]) {
+
+	try {
+		Main main = new Main();
+		main.run ();
 	}
 	catch (UnixOdbc.Error e) {
 		GLib.stderr.printf (@"$(e.message)\n");
 		return 1;
 	}
+	catch (GLib.ConvertError e) {
+		GLib.stderr.printf (@"$(e.message)\n");
+		return 1;
+	}
 
 	return 0;
+}
+
 }
