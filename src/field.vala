@@ -24,10 +24,20 @@ namespace UnixOdbc {
 public class Field {
 	internal uint8[] data = new uint8[256];
 	internal long length_or_indicator;
+	public string name { get; internal set; }
 
 	public string? get_as_string () {
 		if (length_or_indicator == -1) { // TODO: SQL_NULL_DATA
 			return null;
+		}
+		else {
+			return (string) data;
+		}
+	}
+
+	public string get_as_string_default (string default) {
+		if (length_or_indicator == -1) { // TODO: SQL_NULL_DATA
+			return default;
 		}
 		else {
 			return (string) data;
