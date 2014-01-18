@@ -25,19 +25,49 @@ namespace UnixOdbc {
 private delegate Return GetDiagnosticRecord (short record_number, uint8[] state, 
 	out int native_error, uint8[] message_text, out short text_length);
 
-private string get_diagnostic_record (GetDiagnosticRecord d) {
+private string get_diagnostic_record (string function_name, string encoding, bool verbose, GetDiagnosticRecord d) {
 	uint8[] state = new uint8[10];
 	int native_error;
 	uint8[] message_text = new uint8[4096];
 	short text_len;
 	StringBuilder sb = new StringBuilder("");
+	if (verbose) {
+		sb.append (function_name);
+	}
 	// A function call can generate multiple diagnostic records
 	short i = 1;
 	while (succeeded (d (i++, state, out native_error, message_text, out text_len))) {
-		sb.append ("\n---\n");
-		sb.append ("state        : %s\n".printf ((string) state));
-		sb.append ("native_error : %d\n".printf (native_error));
-		sb.append ("message      : %s\n".printf ((string) message_text));
+		if (verbose) {
+			sb.append ("\n---\n");
+			sb.append ("state        : %s\n".printf ((string) state));
+			sb.append ("native_error : %d\n".printf (native_error));
+			if (encoding == "UTF-8") {
+				sb.append ("message      : %s\n".printf ((string) message_text));
+			}
+			else {
+				string inbuf = (string) message_text;
+				try {
+					sb.append ("message      : %s\n".printf (GLib.convert (inbuf, inbuf.length, "UTF-8", encoding)));
+				}
+				catch (ConvertError e) {
+					sb.append ("message      : %s\n".printf ((string) message_text));
+				}
+			}
+		}
+		else {
+			if (encoding == "UTF-8") {
+				sb.append ("%s\n".printf ((string) message_text));
+			}
+			else {
+				string inbuf = (string) message_text;
+				try {
+					sb.append ("%s\n".printf (GLib.convert (inbuf, inbuf.length, "UTF-8", encoding)));
+				}
+				catch (ConvertError e) {
+					sb.append ("%s\n".printf ((string) message_text));
+				}
+			}
+		}
 	}
 	return sb.str;
 }

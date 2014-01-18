@@ -29,39 +29,54 @@ public class Statement {
 	public Connection connection { get; private set; }
 	public string text { get; set; }
 	public ArrayList<Parameter> parameters { get; private set; }
+	public string error_encoding { get; set; default = "UTF-8"; }
+	public string sql_encoding { get; set; default = "UTF-8"; }
+	public bool verbose_errors { get; set; default = false; }
 
 	public Statement (Connection connection) throws Error {
 		parameters = new ArrayList<Parameter> ();
 		this.connection = connection;
+		this.error_encoding = connection.error_encoding;
+		this.sql_encoding = connection.sql_encoding;
 		if (!succeeded (StatementHandle.allocate (connection.handle, out handle))) {
 			throw new Error.ALLOCATE_HANDLE ("Could not allocate statement handle");
 		}
 	}
 
-	internal string get_diagnostic_text () {
-		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	internal string get_diagnostic_text (string function_name) throws Error, GLib.ConvertError {
+		return UnixOdbc.get_diagnostic_record (function_name, error_encoding, verbose_errors, handle.get_diagnostic_record);
 	}
 
-	private void bind_parameter (Parameter parameter, ushort number) throws Error {
+	private void bind_parameter (Parameter parameter, ushort number) throws Error, GLib.ConvertError {
 		if (!succeeded (handle.bind_parameter (number, InputOutputType.INPUT, 
 			parameter.get_c_data_type (), parameter.get_sql_data_type (),
 			parameter.get_column_size (), parameter.get_decimal_digits (),
 			parameter.get_data_pointer (), parameter.get_data_length (), 
 			&parameter.length_or_indicator))) {
-			throw new Error.BIND_PARAMETER ("Could not bind parameter: " + get_diagnostic_text());
+			throw new Error.BIND_PARAMETER (get_diagnostic_text("SQLBindParameter"));
 		}
 	}
 
-	private void bind_parameters () throws Error {
+	private void bind_parameters () throws Error, GLib.ConvertError {
 		for (int i = 0; i < parameters.size; i++) {
 			bind_parameter(parameters[i], (ushort) i + 1);
 		}
 	}
 
-	private void execute_direct (string text) throws Error {
-		Return retval = handle.execute_direct ((uint8[]) text.data);
+	private void execute_direct (string text) throws Error, GLib.ConvertError {
+		string target_text;
+		if (target_text.chomp ().empty ()) {
+			throw new Error.STATEMENT_TEXT_EMPTY ("The statement text must be non empty");
+		}
+		if (sql_encoding == "UTF-8") {
+			target_text = text;
+		}
+		else {
+			target_text = GLib.convert(text, text.length, sql_encoding, "UTF-8");
+		}
+		Return retval = handle.execute_direct ((uint8[]) target_text.data);
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-			throw new Error.EXECUTE_DIRECT ("SQLExecDirect" + get_diagnostic_text());
+			throw new Error.EXECUTE_DIRECT (get_diagnostic_text("SQLExecDirect"));
 		}
 		result = retval != Return.NO_DATA;
 	}
@@ -74,18 +89,25 @@ public class Statement {
 	private void execute_prepared () throws Error {
 		Return retval = handle.execute ();
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-			throw new UnixOdbcError.EXECUTE ("Could not execute statement: " + get_diagnostic_text());
+			throw new UnixOdbcError.EXECUTE (get_diagnostic_text("SQLExecute"));
 		}
 	}
 
 	private void prepare () throws Error {
-		if (!succeeded (handle.prepare ((uint8[]) text.data))) {
-			throw new UnixOdbcError.PREPARE ("Could not prepare statement: " + get_diagnostic_text());
+		string target_text;
+		if (sql_encoding == "UTF-8") {
+			target_text = text;
+		}
+		else {
+			target_text = GLib.convert(text, text.length, sql_encoding, "UTF-8");
+		}
+		if (!succeeded (handle.prepare ((uint8[]) target_text.data))) {
+			throw new UnixOdbcError.PREPARE (get_diagnostic_text("SQLPrepare"));
 		}
 	}
 	*/
 
-	public void execute () throws Error {
+	public void execute () throws Error, GLib.ConvertError {
 		bind_parameters ();
 		execute_direct (text);
 	}
@@ -98,7 +120,7 @@ public class Statement {
 		return count;
 	}
 
-	public RecordIterator iterator () throws Error {
+	public RecordIterator iterator () throws Error, GLib.ConvertError {
 		return new RecordIterator (this);
 	}
 

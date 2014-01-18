@@ -27,9 +27,14 @@ public class Connection {
 	internal ConnectionHandle handle;
 	public Environment environment { get; private set; }
 	public string connection_string { get; set; }
+	public string error_encoding { get; set; default = "UTF-8"; }
+	public string sql_encoding { get; set; default = "UTF-8"; }
+	public bool verbose_errors { get; set; default = false; }
 
 	public Connection (Environment environment) throws Error {
 		this.environment = environment;
+		this.error_encoding = environment.error_encoding;
+		this.sql_encoding = environment.sql_encoding;
 		if (!succeeded (ConnectionHandle.allocate (environment.handle, out handle))) {
 			throw new Error.ALLOCATE_HANDLE ("Could not allocate environment handle");
 		}
@@ -39,14 +44,14 @@ public class Connection {
 		close ();
 	}
 
-	private string get_diagnostic_text () {
-		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	internal string get_diagnostic_text (string function_name) {
+		return UnixOdbc.get_diagnostic_record (function_name, error_encoding, verbose_errors, handle.get_diagnostic_record);
 	}
 
 	public void open () throws Error {
 		uchar[] connstr = (uchar[]) connection_string.data;
 		if (!succeeded (handle.driver_connect (0, connstr, null, null, DriverCompletion.COMPLETE))) {
-			throw new Error.DRIVER_CONNECT ("Could not open connection: " + get_diagnostic_text ());
+			throw new Error.DRIVER_CONNECT (get_diagnostic_text ("SQLDriverConnect"));
 		}
 		connected = true;
 	}
@@ -57,7 +62,7 @@ public class Connection {
 		}
 	}
 
-	public void execute (string text) throws Error {
+	public void execute (string text) throws Error, GLib.ConvertError {
 		var statement = new Statement (this);
 		statement.text = text;
 		statement.execute ();

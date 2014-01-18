@@ -24,6 +24,9 @@ namespace UnixOdbc {
 
 public class Environment {
 	internal EnvironmentHandle handle;
+	public string error_encoding { get; set; default = "UTF-8"; }
+	public string sql_encoding { get; set; default = "UTF-8"; }
+	public bool verbose_errors { get; set; default = false; }
 	
 	public Environment () throws Error {
 		if (!succeeded (EnvironmentHandle.allocate (out handle))) {
@@ -32,8 +35,8 @@ public class Environment {
 		set_odbc_version (OdbcVersion.ODBC3);
 	}
 
-	private string get_diagnostic_text () {
-		return UnixOdbc.get_diagnostic_record (handle.get_diagnostic_record);
+	internal string get_diagnostic_text (string function_name) {
+		return UnixOdbc.get_diagnostic_record (function_name, error_encoding, verbose_errors, handle.get_diagnostic_record);
 	}
 
 	// Split a '\0' delimited list of "key=value" pairs (e.g. "key1=value1\0key1=value2\0\0")
@@ -82,7 +85,7 @@ public class Environment {
 	
 	private void set_odbc_version (OdbcVersion value) throws Error {
 		if (!succeeded (handle.set_attribute (Attribute.ODBC_VERSION, (void *) value, 0))) {
-			throw new Error.SET_ENVIRONMENT_ATTRIBUTE ("Could not set environment attribute: " + get_diagnostic_text ());
+			throw new Error.SET_ENVIRONMENT_ATTRIBUTE (get_diagnostic_text ("SQLSetEnvAttr"));
 		}
 	} 
 }

@@ -22,6 +22,7 @@ using GLib;
 namespace UnixOdbc {
 
 public errordomain Error {
+	// Error domains derived from the unixODBC function names
 	ALLOCATE_HANDLE,
 	FREE_HANDLE,
 	SET_ENVIRONMENT_ATTRIBUTE,
@@ -32,7 +33,10 @@ public errordomain Error {
 	BIND_COLUMN,
 	PREPARE,
 	BIND_PARAMETER,
-	EXECUTE
+	EXECUTE,
+	COLUMN_ATTRIBUTE,
+	// Custom error domains
+	EMPTY_STATEMENT_TEXT
 }
 
 }
