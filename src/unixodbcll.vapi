@@ -244,11 +244,11 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLExecDirect")]
 	public Return execute_direct (
-		[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
+		uint8[] text);
 
 	[CCode (cname = "SQLPrepare")]
 	public Return prepare (
-		[CCode (array_length = true, array_pos = 1.1)] uint8[] text);
+		uint8[] text);
 
 	[CCode (cname = "SQLExecute")]
 	public Return execute ();
@@ -269,10 +269,51 @@ public class StatementHandle {
 		void *target_value, long buffer_length, long *length_or_indicator);
 
 	[CCode (cname = "SQLBindParameter")]
-	public Return bind_parameter (ushort parameter_number,
+	private Return bind_parameter (ushort parameter_number,
 		InputOutputType input_output_type, CDataType value_type,
 		DataType parameter_type, ulong column_size, short decimals_digits,
 		void *parameter_value, long buffer_length, long *length_or_indicator);
+
+	[CCode (cname = "SQLBindBytesInputParameter")]
+	public Return bind_bytes_input_parameter (int number, uchar[] value, 
+		long *length_or_indicator) {
+		return bind_parameter ((ushort) number, InputOutputType.INPUT,
+			CDataType.BINARY, DataType.BINARY, value.length, 0, value, value.length,
+			length_or_indicator);
+	}
+
+	[CCode (cname = "SQLBindStringInputParameter")]
+	public Return bind_string_input_parameter (int number, uint8[] value, 
+		long *length_or_indicator) {
+		return bind_parameter ((ushort) number, InputOutputType.INPUT,
+			CDataType.CHAR, DataType.CHAR, value.length, 0, value, value.length,
+			length_or_indicator);
+	}
+
+	[CCode (cname = "SQLBindIntInputParameter")]
+	public Return bind_int_input_parameter (int number, int *value,
+		long *length_or_indicator) {
+		return bind_parameter ((ushort) number, InputOutputType.INPUT,
+			CDataType.LONG, DataType.INTEGER, 0, 0, value, 0,
+			length_or_indicator);
+	}
+
+	[CCode (cname = "SQLBindDoubleInputParameter")]
+	public Return bind_double_input_parameter (int number, double *value,
+		long *length_or_indicator) {
+		return bind_parameter ((ushort) number, InputOutputType.INPUT,
+			CDataType.DOUBLE, DataType.FLOAT, 0, 0, value, 0,
+			length_or_indicator);
+	}
+
+	[CCode (cname = "SQLBindDateTimeInputParameter")]
+	public Return bind_datetime_input_parameter (int number, uint8[] value, 
+		long *length_or_indicator) {
+		// Three digits for second fractions
+		return bind_parameter ((ushort) number, InputOutputType.INPUT,
+			CDataType.CHAR, DataType.TYPE_TIMESTAMP, 0, 3, value, value.length,
+			length_or_indicator);
+	}
 }
 
 }

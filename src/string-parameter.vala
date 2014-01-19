@@ -45,28 +45,11 @@ public class StringParameter : Parameter {
 		}
 	}
 
-	internal override void* get_data_pointer () {
-		return value.data;
-	}
-
-	internal override long get_data_length () {
-		return value.data.length;
-	}
-
-	internal override ulong get_column_size () {
-		return value.data.length;
-	}
-
-	internal override short get_decimal_digits () {
-		return 0;
-	}
-
-	internal override CDataType get_c_data_type () {
-		return CDataType.CHAR;
-	}
-
-	internal override DataType get_sql_data_type () {
-		return DataType.CHAR;
+	internal override void bind (Statement statement, int number) throws Error {
+		if (!succeeded (statement.handle.bind_int_input_parameter (number,
+			value.data, &length_or_indicator))) {
+			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, string)");
+		}
 	}
 }
 

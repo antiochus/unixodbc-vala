@@ -45,30 +45,13 @@ public class DoubleParameter : Parameter {
 		}
 	}
 
-	internal override void* get_data_pointer () {
-		return &value;
-	}
-
-	internal override long get_data_length () {
-		return 0;
-	}
-
-	internal override ulong get_column_size () {
-		return 0;
-	}
-
-	internal override short get_decimal_digits () {
-		return 0;
-	}
-
-	internal override CDataType get_c_data_type () {
-		return CDataType.DOUBLE;
-	}
-
-	internal override DataType get_sql_data_type () {
+	internal override void bind (Statement statement, int number) throws Error {
 		// TODO: This doesn't work when the SQL data type is NUMERIC (exact numeric)
 		// Maybe introduce a DecimalParameter, based on the SQL_NUMERIC_STRUCT data type
-		return DataType.FLOAT;
+		if (!succeeded (statement.handle.bind_double_input_parameter (number,
+			&value, &length_or_indicator))) {
+			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, double)");
+		}
 	}
 }
 

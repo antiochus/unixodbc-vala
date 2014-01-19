@@ -52,28 +52,11 @@ public class BytesParameter : Parameter {
 		}
 	}
 
-	internal override void* get_data_pointer () {
-		return value;
-	}
-
-	internal override long get_data_length () {
-		return value.length;
-	}
-
-	internal override ulong get_column_size () {
-		return value.length;
-	}
-
-	internal override short get_decimal_digits () {
-		return 0;
-	}
-
-	internal override CDataType get_c_data_type () {
-		return CDataType.BINARY;
-	}
-
-	internal override DataType get_sql_data_type () {
-		return DataType.BINARY;
+	internal override void bind (Statement statement, int number) throws Error {
+		if (!succeeded (statement.handle.bind_bytes_input_parameter (number,
+			value, &length_or_indicator))) {
+			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, bytes)");
+		}
 	}
 }
 

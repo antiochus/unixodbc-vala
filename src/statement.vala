@@ -47,27 +47,17 @@ public class Statement {
 		return UnixOdbc.get_diagnostic_record (function_name, error_encoding, verbose_errors, handle.get_diagnostic_record);
 	}
 
-	private void bind_parameter (Parameter parameter, ushort number) throws Error, GLib.ConvertError {
-		if (!succeeded (handle.bind_parameter (number, InputOutputType.INPUT, 
-			parameter.get_c_data_type (), parameter.get_sql_data_type (),
-			parameter.get_column_size (), parameter.get_decimal_digits (),
-			parameter.get_data_pointer (), parameter.get_data_length (), 
-			&parameter.length_or_indicator))) {
-			throw new Error.BIND_PARAMETER (get_diagnostic_text("SQLBindParameter"));
-		}
-	}
-
 	private void bind_parameters () throws Error, GLib.ConvertError {
 		for (int i = 0; i < parameters.size; i++) {
-			bind_parameter(parameters[i], (ushort) i + 1);
+			parameters[i].bind (this, (ushort) i + 1);
 		}
 	}
 
 	private void execute_direct (string text) throws Error, GLib.ConvertError {
-		string target_text;
-		if (target_text.chomp ().empty ()) {
-			throw new Error.STATEMENT_TEXT_EMPTY ("The statement text must be non empty");
+		if (text.strip ().length == 0) {
+			throw new Error.EMPTY_STATEMENT_TEXT ("The statement text must be non empty");
 		}
+		string target_text;
 		if (sql_encoding == "UTF-8") {
 			target_text = text;
 		}

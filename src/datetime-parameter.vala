@@ -57,28 +57,11 @@ public class DateTimeParameter : Parameter {
 		}
 	}
 
-	internal override void* get_data_pointer () {
-		return value.data;
-	}
-
-	internal override long get_data_length () {
-		return value.data.length;
-	}
-
-	internal override ulong get_column_size () {
-		return 0;
-	}
-
-	internal override short get_decimal_digits () {
-		return 3; // Three digits for second fractions
-	}
-
-	internal override CDataType get_c_data_type () {
-		return CDataType.CHAR;
-	}
-
-	internal override DataType get_sql_data_type () {
-		return DataType.TYPE_TIMESTAMP;
+	internal override void bind (Statement statement, int number) throws Error {
+		if (!succeeded (statement.handle.bind_datetime_input_parameter (number,
+			value.data, &length_or_indicator))) {
+			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, datetime)");
+		}
 	}
 }
 
