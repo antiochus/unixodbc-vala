@@ -25,7 +25,7 @@ namespace UnixOdbc {
 public abstract class Parameter {
 	public abstract string? get_as_string ();
 	internal long length_or_indicator;
-	internal abstract void bind (Statement statement, int number) throws Error;
+	internal abstract void bind (Statement statement, int number) throws Error, GLib.ConvertError;
 }
 
 }

@@ -29,17 +29,20 @@ public class Statement {
 	public Connection connection { get; private set; }
 	public string text { get; set; }
 	public ArrayList<Parameter> parameters { get; private set; }
+	public ArrayList<Field> fields { get; private set; }
 	public string error_encoding { get; set; default = "UTF-8"; }
 	public string sql_encoding { get; set; default = "UTF-8"; }
+	public string column_encoding { get; set; default = "UTF-8"; }
 	public bool verbose_errors { get; set; default = false; }
 
 	public Statement (Connection connection) throws Error {
 		parameters = new ArrayList<Parameter> ();
+		fields = new ArrayList<Field> ();
 		this.connection = connection;
 		this.error_encoding = connection.error_encoding;
 		this.sql_encoding = connection.sql_encoding;
 		if (!succeeded (StatementHandle.allocate (connection.handle, out handle))) {
-			throw new Error.ALLOCATE_HANDLE ("Could not allocate statement handle");
+			throw new Error.ALLOCATE_HANDLE ("SQLAllocHandle (SQL_HANDLE_STMT), could not allocate statement handle");
 		}
 	}
 
@@ -50,6 +53,30 @@ public class Statement {
 	private void bind_parameters () throws Error, GLib.ConvertError {
 		for (int i = 0; i < parameters.size; i++) {
 			parameters[i].bind (this, (ushort) i + 1);
+		}
+	}
+
+	private void bind_columns () throws Error, GLib.ConvertError {
+		int count = get_column_count ();
+		for (int i = 0; i < count; i++) {
+			Field field = new Field ();
+			uint8 name_buffer[2048];
+			short string_length;
+			long numeric_attribute;
+			if (!succeeded (
+				handle.column_attribute (
+					(ushort) i + 1, ColumnDescriptor.NAME, name_buffer, (short)name_buffer.length, out string_length, out numeric_attribute
+			))) {
+				throw new Error.COLUMN_ATTRIBUTE (get_diagnostic_text ("SQLColAttribute"));
+			}
+			field.name = (string)name_buffer;
+			fields.add (field);
+			// Binding to DataType.CHAR will use the ANSI codepage of the ODBC driver
+			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
+			// TODO: For other drivers there should be GLib.IConv support
+			if (!succeeded (handle.bind_column ((ushort) i + 1, CDataType.CHAR, (void *) field.data, field.data.length, &field.length_or_indicator))) {
+				throw new Error.BIND_COLUMN (get_diagnostic_text ("SQLBindCol"));
+			}
 		}
 	}
 
@@ -66,9 +93,12 @@ public class Statement {
 		}
 		Return retval = handle.execute_direct ((uint8[]) target_text.data);
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-			throw new Error.EXECUTE_DIRECT (get_diagnostic_text("SQLExecDirect"));
+			throw new Error.EXECUTE_DIRECT (get_diagnostic_text ("SQLExecDirect"));
 		}
 		result = retval != Return.NO_DATA;
+		if (result) {
+			bind_columns ();
+		}
 	}
 
 	public bool has_result () {
@@ -79,7 +109,7 @@ public class Statement {
 	private void execute_prepared () throws Error {
 		Return retval = handle.execute ();
 		if (! (succeeded (retval) || (retval == Return.NO_DATA))) {
-			throw new UnixOdbcError.EXECUTE (get_diagnostic_text("SQLExecute"));
+			throw new UnixOdbcError.EXECUTE (get_diagnostic_text ("SQLExecute"));
 		}
 	}
 
@@ -92,7 +122,7 @@ public class Statement {
 			target_text = GLib.convert(text, text.length, sql_encoding, "UTF-8");
 		}
 		if (!succeeded (handle.prepare ((uint8[]) target_text.data))) {
-			throw new UnixOdbcError.PREPARE (get_diagnostic_text("SQLPrepare"));
+			throw new UnixOdbcError.PREPARE (get_diagnostic_text ("SQLPrepare"));
 		}
 	}
 	*/
@@ -102,10 +132,10 @@ public class Statement {
 		execute_direct (text);
 	}
 
-	public int get_column_count () throws Error {
+	public int get_column_count () throws Error, GLib.ConvertError {
 		short count;
 		if (!succeeded (handle.number_of_result_columns (out count))) {
-			throw new Error.NUMBER_RESULT_COLUMNS ("Could not get number of result columns");
+			throw new Error.NUMBER_RESULT_COLUMNS (get_diagnostic_text ("SQLNumResultCols"));
 		}
 		return count;
 	}

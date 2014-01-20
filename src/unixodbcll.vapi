@@ -256,6 +256,7 @@ public class StatementHandle {
 	[CCode (cname = "SQLNumResultCols")]
 	public Return number_of_result_columns (out short column_count);
 
+	// TODO: Write wrappers for different data types
 	[CCode (cname = "SQLColAttribute")]
 	public Return column_attribute (ushort column_number,
 		ColumnDescriptor field_identifier, void *character_attribute, 
@@ -265,6 +266,7 @@ public class StatementHandle {
 	public Return fetch ();
 
 	[CCode (cname = "SQLBindCol")]
+	// TODO: Write wrappers for different data types
 	public Return bind_column (ushort column_number, CDataType target_type,
 		void *target_value, long buffer_length, long *length_or_indicator);
 

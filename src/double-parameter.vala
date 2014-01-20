@@ -45,12 +45,12 @@ public class DoubleParameter : Parameter {
 		}
 	}
 
-	internal override void bind (Statement statement, int number) throws Error {
+	internal override void bind (Statement statement, int number) throws Error, GLib.ConvertError {
 		// TODO: This doesn't work when the SQL data type is NUMERIC (exact numeric)
 		// Maybe introduce a DecimalParameter, based on the SQL_NUMERIC_STRUCT data type
 		if (!succeeded (statement.handle.bind_double_input_parameter (number,
 			&value, &length_or_indicator))) {
-			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, double)");
+			throw new Error.BIND_PARAMETER (statement.get_diagnostic_text ("SQLBindCol") + @"\nCould not bind parameter $number (input, double)");
 		}
 	}
 }

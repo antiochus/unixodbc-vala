@@ -30,7 +30,7 @@ public class Environment {
 	
 	public Environment () throws Error {
 		if (!succeeded (EnvironmentHandle.allocate (out handle))) {
-			throw new Error.ALLOCATE_HANDLE ("Could not allocate environment handle");
+			throw new Error.ALLOCATE_HANDLE ("SQLAllocHandle (SQL_HANDLE_ENV), could not allocate environment handle");
 		}
 		set_odbc_version (OdbcVersion.ODBC3);
 	}

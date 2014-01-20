@@ -24,32 +24,9 @@ namespace UnixOdbc {
 
 public class RecordIterator {
 	public Statement statement { get; private set; }
-	private ArrayList<Field> fields;
 
 	public RecordIterator (Statement statement) throws Error, GLib.ConvertError {
 		this.statement = statement;
-		int count = statement.get_column_count ();
-		fields = new ArrayList<Field> ();
-		for (int i = 1; i <= count; i++) {
-			Field field = new Field ();
-			uint8 name_buffer[2048];
-			short string_length;
-			long numeric_attribute;
-			if (!succeeded (
-				statement.handle.column_attribute (
-					(ushort) i, ColumnDescriptor.NAME, name_buffer, (short)name_buffer.length, out string_length, out numeric_attribute
-			))) {
-				throw new Error.COLUMN_ATTRIBUTE (statement.get_diagnostic_text ("SQLColAttribute"));
-			}
-			field.name = (string)name_buffer;
-			fields.add (field);
-			// Binding to DataType.CHAR will use the ANSI codepage of the ODBC driver
-			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
-			// TODO: For other drivers there should be GLib.IConv support
-			if (!succeeded (statement.handle.bind_column ((ushort) i, CDataType.CHAR, (void *) field.data, field.data.length, &field.length_or_indicator))) {
-				throw new Error.BIND_COLUMN (statement.get_diagnostic_text ("SQLBindCol"));
-			}
-		}
 	}
 
 	public bool next () {
@@ -57,7 +34,7 @@ public class RecordIterator {
 	}
 
 	public Record get () {
-		return new Record (fields);
+		return new Record (statement.fields);
 	}
 }
 

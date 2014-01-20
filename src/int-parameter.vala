@@ -45,10 +45,10 @@ public class IntParameter : Parameter {
 		}
 	}
 
-	internal override void bind (Statement statement, int number) throws Error {
+	internal override void bind (Statement statement, int number) throws Error, GLib.ConvertError {
 		if (!succeeded (statement.handle.bind_int_input_parameter (number,
 			&value, &length_or_indicator))) {
-			throw new Error.BIND_PARAMETER (@"Could not bind parameter $number (input, int)");
+			throw new Error.BIND_PARAMETER (statement.get_diagnostic_text ("SQLBindCol") + @"\nCould not bind parameter $number (input, int)");
 		}
 	}
 

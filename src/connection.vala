@@ -36,7 +36,7 @@ public class Connection {
 		this.error_encoding = environment.error_encoding;
 		this.sql_encoding = environment.sql_encoding;
 		if (!succeeded (ConnectionHandle.allocate (environment.handle, out handle))) {
-			throw new Error.ALLOCATE_HANDLE ("Could not allocate environment handle");
+			throw new Error.ALLOCATE_HANDLE ("SQLAllocHandle (SQL_HANDLE_DBC), could not allocate connection handle");
 		}
 	}
 
