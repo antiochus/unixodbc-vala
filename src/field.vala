@@ -1,7 +1,7 @@
 /* -*- Mode: vala; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
  * unixodbc-vala - Vala Bindings for unixODBC
- * Copyright (C) 2013 Jens Mühlenhoff <j.muehlenhoff@gmx.de>
+ * Copyright (C) 2013-2014 Jens Mühlenhoff <j.muehlenhoff@gmx.de>
  * 
  * unixodbc-vala is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -21,28 +21,12 @@ using GLib;
 
 namespace UnixOdbc {
 
-public class Field {
-	internal uint8[] data = new uint8[256];
+public abstract class Field {
 	internal long length_or_indicator;
 	public string name { get; internal set; }
 
-	public string? get_as_string () {
-		if (length_or_indicator == -1) { // TODO: SQL_NULL_DATA
-			return null;
-		}
-		else {
-			return (string) data;
-		}
-	}
-
-	public string get_as_string_default (string default) {
-		if (length_or_indicator == -1) { // TODO: SQL_NULL_DATA
-			return default;
-		}
-		else {
-			return (string) data;
-		}
-	}
+	public abstract string? get_as_string ();
+	public abstract string get_as_string_default (string default);
 }
 
 }

@@ -117,22 +117,49 @@ public class ConnectionHandle {
 // StatementHandle -------------------------------------------------------------
 
 [CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DESC_", has_type_id = false)]
-public enum ColumnDescriptor {
-	COUNT,
-	TYPE,
-	LENGTH,
+public enum ColumnDescriptorInt {
+	AUTO_UNIQUE_VALUE, // ODBC 1.0
+	CASE_SENSITIVE, // ODBC 1.0
+	CONCISE_TYPE,  // ODBC 1.0
+	COUNT, // ODBC 1.0
+	DISPLAY_SIZE, // ODBC 1.0
+	FIXED_PREC_SCALE, // ODBC 1.0
+	LENGTH, // ODBC 3.0
+	NULLABLE, // ODBC 3.0
+	NUM_PREC_RADIX, // ODBC 3.0
+	OCTET_LENGTH, // ODBC 3.0
+	PRECISION, // ODBC 3.0
+	SCALE, // ODBC 3.0
+	SEARCHABLE, // ODBC 1.0
+	TYPE, // ODBC 3.0
+	UNNAMED, // ODBC 3.0
+	UNSIGNED, // ODBC 1.0
+	UPDATABLE, // ODBC 1.0
+}
+
+[CCode (cname = "SQLUSMALLINT", cprefix = "SQL_DESC_", has_type_id = false)]
+public enum ColumnDescriptorString {
+	BASE_COLUMN_NAME, // ODBC 3.0
+	BASE_TABLE_NAME, // ODBC 3.0
+	CATALOG_NAME, // ODBC 3.0
+	LABEL, // ODBC 2.0
+	LITERAL_PREFIX, // ODBC 3.0
+	LITERAL_SUFFIX, // ODBC 3.0
+	LOCAL_TYPE_NAME, // ODBC 3.0
+	NAME, // ODBC 3.0
+	SCHEMA_NAME, // ODBC 2.0
+	TABLE_NAME, // ODBC 2.0
+	TYPE_NAME, // ODBC 1.0
+}
+
+/*
+	// TODO: Other SQL_DESC_ values from the unixodbc header files
 	LENGTH_PTR,
-	PRECISION,
-	SCALE,
 	DATETIME_INTERVAL_CODE,
-	NULLABLE,
 	INDICATOR_PTR,
 	DATA_PTR,
-	NAME,
-	UNNAMED,
-	OCTET_LENGTH,
-	ALLOC_TYPE
-}
+	ALLOC_TYPE,
+*/
 
 [CCode (cname = "SQLSMALLINT", cprefix = "SQL_C_", has_type_id = false)]
 public enum CDataType {
@@ -256,19 +283,46 @@ public class StatementHandle {
 	[CCode (cname = "SQLNumResultCols")]
 	public Return number_of_result_columns (out short column_count);
 
-	// TODO: Write wrappers for different data types
 	[CCode (cname = "SQLColAttribute")]
-	public Return column_attribute (ushort column_number,
-		ColumnDescriptor field_identifier, void *character_attribute, 
+	private Return column_attribute (ushort column_number,
+		ushort field_identifier, void *character_attribute, 
 		short buffer_length, out short string_length, out long numeric_attribute);
+
+	[CCode (cname = "SQLColIntAttribute")]
+	public Return column_int_attribute (int column_number,
+		ColumnDescriptorInt field_identifier, int value)
+	{
+		short string_length;
+		long numeric_attribute;
+		return column_attribute ((ushort) column_number, (ushort) field_identifier,
+			&value, 0, out string_length, out numeric_attribute);
+	}
+
+	[CCode (cname = "SQLColStringAttribute")]
+	public Return column_string_attribute (int column_number,
+		ColumnDescriptorString field_identifier, uint8[] value)
+	{
+		short string_length;
+		long numeric_attribute;
+		return column_attribute ((ushort) column_number, (ushort) field_identifier,
+			value, (short) value.length, out string_length, out numeric_attribute);
+	}
 
 	[CCode (cname = "SQLFetch")]
 	public Return fetch ();
 
 	[CCode (cname = "SQLBindCol")]
-	// TODO: Write wrappers for different data types
-	public Return bind_column (ushort column_number, CDataType target_type,
+	private Return bind_column (ushort column_number, CDataType target_type,
 		void *target_value, long buffer_length, long *length_or_indicator);
+
+	[CCode (cname = "SQLBindStringCol")]
+	public Return bind_string_column (int column_number, uint8[] value,
+		long *length_or_indicator)
+		requires (column_number >= 0)
+	{
+		return bind_column ((ushort) column_number, CDataType.CHAR, value, value.length,
+			length_or_indicator);
+	}
 
 	[CCode (cname = "SQLBindParameter")]
 	private Return bind_parameter (ushort parameter_number,
@@ -278,7 +332,9 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindBytesInputParameter")]
 	public Return bind_bytes_input_parameter (int number, uchar[] value, 
-		long *length_or_indicator) {
+		long *length_or_indicator)
+		requires (number >= 1)
+	{
 		return bind_parameter ((ushort) number, InputOutputType.INPUT,
 			CDataType.BINARY, DataType.BINARY, value.length, 0, value, value.length,
 			length_or_indicator);
@@ -286,7 +342,9 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindStringInputParameter")]
 	public Return bind_string_input_parameter (int number, uint8[] value, 
-		long *length_or_indicator) {
+		long *length_or_indicator)
+		requires (number >= 1)
+	{
 		return bind_parameter ((ushort) number, InputOutputType.INPUT,
 			CDataType.CHAR, DataType.CHAR, value.length, 0, value, value.length,
 			length_or_indicator);
@@ -294,7 +352,9 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindIntInputParameter")]
 	public Return bind_int_input_parameter (int number, int *value,
-		long *length_or_indicator) {
+		long *length_or_indicator)
+		requires (number >= 1)
+	{
 		return bind_parameter ((ushort) number, InputOutputType.INPUT,
 			CDataType.LONG, DataType.INTEGER, 0, 0, value, 0,
 			length_or_indicator);
@@ -302,7 +362,9 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindDoubleInputParameter")]
 	public Return bind_double_input_parameter (int number, double *value,
-		long *length_or_indicator) {
+		long *length_or_indicator)
+		requires (number >= 1)
+	{
 		return bind_parameter ((ushort) number, InputOutputType.INPUT,
 			CDataType.DOUBLE, DataType.FLOAT, 0, 0, value, 0,
 			length_or_indicator);
@@ -310,7 +372,9 @@ public class StatementHandle {
 
 	[CCode (cname = "SQLBindDateTimeInputParameter")]
 	public Return bind_datetime_input_parameter (int number, uint8[] value, 
-		long *length_or_indicator) {
+		long *length_or_indicator)
+		requires (number >= 1)
+	{
 		// Three digits for second fractions
 		return bind_parameter ((ushort) number, InputOutputType.INPUT,
 			CDataType.CHAR, DataType.TYPE_TIMESTAMP, 0, 3, value, value.length,

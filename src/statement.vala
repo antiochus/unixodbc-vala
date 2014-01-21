@@ -32,7 +32,7 @@ public class Statement {
 	public ArrayList<Field> fields { get; private set; }
 	public string error_encoding { get; set; default = "UTF-8"; }
 	public string sql_encoding { get; set; default = "UTF-8"; }
-	public string column_encoding { get; set; default = "UTF-8"; }
+	// public string field_encoding { get; set; default = "UTF-8"; }
 	public bool verbose_errors { get; set; default = false; }
 
 	public Statement (Connection connection) throws Error {
@@ -59,14 +59,9 @@ public class Statement {
 	private void bind_columns () throws Error, GLib.ConvertError {
 		int count = get_column_count ();
 		for (int i = 0; i < count; i++) {
-			Field field = new Field ();
+			StringField field = new StringField ();
 			uint8 name_buffer[2048];
-			short string_length;
-			long numeric_attribute;
-			if (!succeeded (
-				handle.column_attribute (
-					(ushort) i + 1, ColumnDescriptor.NAME, name_buffer, (short)name_buffer.length, out string_length, out numeric_attribute
-			))) {
+			if (!succeeded (handle.column_string_attribute (i + 1, ColumnDescriptorString.NAME, name_buffer))) {
 				throw new Error.COLUMN_ATTRIBUTE (get_diagnostic_text ("SQLColAttribute"));
 			}
 			field.name = (string)name_buffer;
@@ -74,7 +69,7 @@ public class Statement {
 			// Binding to DataType.CHAR will use the ANSI codepage of the ODBC driver
 			// For drivers supporting UTF-8 this is fine, since Vala uses UTF-8 internally
 			// TODO: For other drivers there should be GLib.IConv support
-			if (!succeeded (handle.bind_column ((ushort) i + 1, CDataType.CHAR, (void *) field.data, field.data.length, &field.length_or_indicator))) {
+			if (!succeeded (handle.bind_string_column (i + 1, field.data, &field.length_or_indicator))) {
 				throw new Error.BIND_COLUMN (get_diagnostic_text ("SQLBindCol"));
 			}
 		}
