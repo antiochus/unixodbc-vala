@@ -1,7 +1,7 @@
 /* -*- Mode: vala; indent-tabs-mode: t; c-basic-offset: 4; tab-width: 4 -*-  */
 /*
  * unixodbc-vala - Vala Bindings for unixODBC
- * Copyright (C) 2013 Jens Mühlenhoff <j.muehlenhoff@gmx.de>
+ * Copyright (C) 2013-2014 Jens Mühlenhoff <j.muehlenhoff@gmx.de>
  * 
  * unixodbc-vala is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
